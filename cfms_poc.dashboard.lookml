@@ -15,8 +15,6 @@
     - cfms_poc.office_name
     fill_fields:
     - cfms_poc.date
-    filters:
-      cfms_poc.office_name: "-NULL"
     sorts:
     - cfms_poc.count desc 0
     - cfms_poc.date
@@ -70,8 +68,6 @@
     - cfms_poc.program_name
     fill_fields:
     - cfms_poc.date
-    filters:
-      cfms_poc.program_name: "-NULL"
     sorts:
     - cfms_poc.date
     - cfms_poc.program_name 0
