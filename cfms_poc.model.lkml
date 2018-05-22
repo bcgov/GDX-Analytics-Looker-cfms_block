@@ -7,6 +7,6 @@ week_start_day: sunday
 include: "*.view"
 
 # include all dashboards in this project
-include: "*.dashboard"
+# include: "*.dashboard"
 
 explore: cfms_poc {}

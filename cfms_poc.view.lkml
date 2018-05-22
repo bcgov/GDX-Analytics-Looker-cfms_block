@@ -157,7 +157,7 @@ view: cfms_poc {
           service_bc_office_info.name AS office_name,
           welcome_table.agent_id,
           chooseservice_table.program_id,
-          static.service_info.name AS program_name,
+          chooseservice_table.program_name,
           transaction_name,
           chooseservice_table.channel,
           finish_table.inaccurate_time,
@@ -171,7 +171,6 @@ view: cfms_poc {
           LEFT JOIN invite_table ON welcome_table.client_id = invite_table.client_id AND finish_table.service_count = invite_table.service_count
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
-          LEFT JOIN static.service_info ON static.service_info.id = chooseservice_table.program_id
           LEFT JOIN static.service_bc_office_info ON static.service_bc_office_info.id = chooseservice_table.office_id
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
@@ -201,9 +200,9 @@ view: cfms_poc {
             channel,
             inaccurate_time,
             welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
-            finalset.reception_time,
-            finalset.waiting_time,
-            finalset.prep_time,
+            finalset.reception_time AS reception_duration,
+            finalset.waiting_time AS waiting_duration,
+            finalset.prep_time AS prep_duration,
             finalset.client_id_ranked
           ;;
   }
@@ -213,70 +212,70 @@ view: cfms_poc {
     drill_fields: [detail*]
   }
 
-  measure: reception_time_average {
+  measure: reception_duration_average {
     type:  average
-    sql: (1.00 * ${TABLE}.reception_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
 
-  dimension: reception_time {
+  dimension: reception_duration {
     type:  number
-    sql: (1.00 * ${TABLE}.reception_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
 
-  dimension: waiting_time {
+  dimension: waiting_duration {
     type:  number
-    sql: (1.00 * ${TABLE}.waiting_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: waiting_time_per_issue_sum {
+  measure: waiting_duration_per_issue_sum {
     type: sum
-    sql: (1.00 * ${TABLE}.waiting_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: waiting_time_per_issue_average {
+  measure: waiting_duration_per_issue_average {
     type:  average
-    sql: (1.00 * ${TABLE}.waiting_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: waiting_time_sum {
+  measure: waiting_duration_sum {
     type: sum_distinct
     sql_distinct_key: ${TABLE}.client_id;;
-    sql: (1.00 * ${TABLE}.waiting_time_sum)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: waiting_time_average {
+  measure: waiting_duration_average {
     type: average_distinct
-    sql: (1.00 * ${TABLE}.waiting_time_sum)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
   }
 
-  dimension: prep_time {
+  dimension: prep_duration {
     type:  number
-    sql: (1.00 * ${TABLE}.prep_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: prep_time_per_issue_sum {
+  measure: prep_duration_per_issue_sum {
     type: sum
-    sql: (1.00 * ${TABLE}.prep_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: prep_time_per_issue_average {
+  measure: prep_duration_per_issue_average {
     type:  average
-    sql: (1.00 * ${TABLE}.prep_time)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: prep_time_sum {
+  measure: prep_duration_sum {
     type: sum_distinct
     sql_distinct_key: ${TABLE}.client_id;;
-    sql: (1.00 * ${TABLE}.prep_time_sum)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
-  measure: prep_time_average {
+  measure: prep_duration_average {
     type: average_distinct
-    sql: (1.00 * ${TABLE}.prep_time_sum)/(60*60*24) ;;
+    sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
   }
@@ -406,10 +405,7 @@ view: cfms_poc {
       start_time,
       chooseservice_time,
       finish_time,
-      date,
-      reception_time,
-      reception_time_average,
-      waiting_time
+      date
     ]
   }
 }
