@@ -125,13 +125,13 @@ view: cfms_poc {
           finish_table.service_count,
           CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL) THEN DATEDIFF(seconds, welcome_time, stand_time)
               ELSE NULL
-              END AS reception_time,
+              END AS reception_duration,
           CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL) THEN DATEDIFF(seconds, stand_time, invite_time)
               ELSE NULL
-              END AS waiting_time,
+              END AS waiting_duration,
           CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
-              END AS prep_time
+              END AS prep_duration
 
           FROM welcome_table
           LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
@@ -162,9 +162,9 @@ view: cfms_poc {
           chooseservice_table.channel,
           finish_table.inaccurate_time,
           welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
-          c1.reception_time,
-          c1.waiting_time,
-          c1.prep_time
+          c1.reception_duration,
+          c1.waiting_duration,
+          c1.prep_duration
           FROM welcome_table
           LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
           LEFT JOIN finish_table ON welcome_table.client_id = finish_table.client_id
@@ -184,8 +184,8 @@ view: cfms_poc {
             WHERE ranked.client_id_ranked = 1
           )
           SELECT finalset.*,
-            SUM(c2.waiting_time) AS waiting_time_sum,
-            SUM(c2.prep_time) AS prep_time_sum
+            SUM(c2.waiting_duration) AS waiting_duration_sum,
+            SUM(c2.prep_duration) AS prep_duration_sum
           FROM finalset
           JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
           WHERE finalset.client_id_ranked = 1
@@ -200,9 +200,9 @@ view: cfms_poc {
             channel,
             inaccurate_time,
             welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
-            finalset.reception_time AS reception_duration,
-            finalset.waiting_time AS waiting_duration,
-            finalset.prep_time AS prep_duration,
+            finalset.reception_duration,
+            finalset.waiting_duration,
+            finalset.prep_duration,
             finalset.client_id_ranked
           ;;
   }
