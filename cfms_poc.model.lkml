@@ -10,3 +10,4 @@ include: "*.view"
 # include: "*.dashboard"
 
 explore: cfms_poc {}
+explore: cats {}
