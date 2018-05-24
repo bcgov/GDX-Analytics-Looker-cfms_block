@@ -4,13 +4,14 @@ view: cats {
           get_string,
           refer,
           site,
+          gdx_id,
           source_translated_ip,
           source_host_name,
           flex_string -- , sbc.*
           FROM servicebc.cats_gdx AS gdx
-          JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port
+          LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate, sbc.firewall_time)) < 30
           LEFT JOIN static.cats_info ON static.cats_info.asset_tag = sbc.source_host_name
-          WHERE abs(DATEDIFF('minute', gdx.govdate, sbc.firewall_time)) < 30 ;;
+          ;;
   }
 
 
@@ -32,6 +33,11 @@ view: cats {
   dimension: site {
     type: string
     sql: ${TABLE}.site;;
+  }
+
+  dimension: gdx_id {
+    type: number
+    sql: ${TABLE}.gdx_id;;
   }
 
   dimension: source_translated_ip {
