@@ -5,6 +5,7 @@ view: cats {
           refer,
           site,
           gdx_id,
+          ip AS gdx_ip,
           source_translated_ip,
           source_host_name,
           flex_string
@@ -30,9 +31,13 @@ view: cats {
     sql: ${TABLE}.refer;;
   }
 
-  dimension: site {
+   dimension: site {
     type: string
     sql: ${TABLE}.site;;
+  }
+  dimension: gdx_ip {
+    type: string
+    sql: ${TABLE}.gdx_ip;;
   }
 
   dimension: gdx_id {

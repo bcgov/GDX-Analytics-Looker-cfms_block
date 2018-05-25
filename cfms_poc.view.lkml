@@ -53,7 +53,7 @@ view: cfms_poc {
             agent_id,
             event_time stand_time
           FROM step1
-          WHERE event_name in ('addtoqueue','beginservice')
+          WHERE event_name in ('addtoqueue') -- ,'beginservice')
           ORDER BY event_time
           ),
         invite_table AS(
@@ -66,7 +66,7 @@ view: cfms_poc {
             agent_id,
             event_time invite_time
           FROM step1
-          WHERE event_name in ('beginservice','invitecitizen')
+          WHERE event_name in ('invitecitizen','invitefromlist')-- removed beginservice
           ORDER BY event_time
           ),
         start_table AS(
@@ -143,9 +143,9 @@ view: cfms_poc {
         finalcalc AS (
           SELECT ranked.*
           FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3, t4) AS client_id_ranked
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4) AS client_id_ranked -- we want the LAST t3 = invite time
             FROM calculations
-            ORDER BY client_id, t1, t2, t3, t4
+            ORDER BY client_id, service_count, t1, t2, t3 DESC, t4
           ) AS ranked
           WHERE ranked.client_id_ranked = 1
         ),
