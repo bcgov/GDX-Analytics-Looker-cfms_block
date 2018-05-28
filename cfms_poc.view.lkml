@@ -1,6 +1,9 @@
 view: cfms_poc {
   derived_table: {
-    sql: WITH step1 AS(
+    sql: WITH step1 AS( -- Build a CTE containing all events using the name_tracker "CFMS_poc"
+                        -- this will include all fields for all possible events. We will then
+                        -- build the individual tables from this big one below
+                        -- NOTE: we are ignoring instances where there is no client_id
           SELECT
             event_name,
             derived_tstamp AS event_time,
@@ -30,8 +33,9 @@ view: cfms_poc {
               ON ev.event_id = ho.root_id
           WHERE name_tracker = 'CFMS_poc' AND client_id IS NOT NULL
           ),
-      welcome_table AS(
-        SELECT
+      welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
+                        -- This occurs when the "addcitizen" event is hit
+          SELECT
             event_name,
             event_time,
             client_id,
@@ -43,7 +47,8 @@ view: cfms_poc {
           WHERE event_name in ('addcitizen')
           ORDER BY event_time
           ),
-        stand_table AS(
+        stand_table AS( -- This CTE captures all events that could trigger a "Stand time".
+                        -- This occurs when the "addtoqueue" event is hit
           SELECT
             event_name,
             event_time,
@@ -53,10 +58,12 @@ view: cfms_poc {
             agent_id,
             event_time stand_time
           FROM step1
-          WHERE event_name in ('addtoqueue') -- ,'beginservice')
+          WHERE event_name in ('addtoqueue')
           ORDER BY event_time
           ),
-        invite_table AS(
+        invite_table AS(-- This CTE captures all events that could trigger a "Invite time".
+                        -- This occurs when the "invitecitizen" or "invitefrom list" event is hit
+                        -- Note that in calculations below we will take the LAST occurence of this
           SELECT
             event_name,
             event_time,
@@ -66,10 +73,11 @@ view: cfms_poc {
             agent_id,
             event_time invite_time
           FROM step1
-          WHERE event_name in ('invitecitizen','invitefromlist')-- removed beginservice
-          ORDER BY event_time
+          WHERE event_name in ('invitecitizen','invitefromlist')
+          ORDER BY event_time DESC
           ),
-        start_table AS(
+        start_table AS( -- This CTE captures all events that could trigger a "Start time".
+                        -- This occurs when the "beginservice" event is hit
           SELECT
             event_name,
             event_time,
@@ -82,7 +90,9 @@ view: cfms_poc {
           WHERE event_name in ('beginservice')
           ORDER BY event_time
           ),
-        finish_table AS(
+        finish_table AS( -- This CTE captures all events that could trigger a "Finish time".
+                        -- This occurs when the "finish" or "custermleft" event is hit
+                        -- NOTE: there is also a count and inacurate_time flag here
           SELECT
             event_name,
             event_time,
@@ -97,7 +107,10 @@ view: cfms_poc {
           WHERE event_name in ('finish','customerleft')
           ORDER BY event_time
           ),
-        chooseservice_table AS(
+        chooseservice_table AS( -- This CTE captures all events that could trigger a "Chooseserviec time".
+                        -- This occurs when the "chooseservice" event is hit
+                        -- This is where we learn the service info.
+                        -- NOTE: we want the LAST call for a given client_id/service_count
           SELECT
             event_name,
             event_time,
@@ -115,7 +128,7 @@ view: cfms_poc {
           WHERE event_name in ('chooseservice')
           ORDER BY event_time DESC
           ),
-        calculations AS (
+        calculations AS ( -- Here we build an array of all possible calcultation combinations
           SELECT
           welcome_time AS t1,
           stand_time AS t2,
@@ -140,7 +153,14 @@ view: cfms_poc {
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
           ORDER BY welcome_time, stand_time, invite_time, start_time
         ),
-        finalcalc AS (
+        finalcalc AS (-- This is where we choose the correct one.
+                      -- NOTE: we want the:
+                        -- first: welcome time (t1)
+                        -- first: stand time (t2)
+                        -- LAST: invite time (t3)
+                        -- first: start time (t4)
+                      -- These are selected using the ROW_NUMBER partition method below.
+                      -- NOTE: the ordering is chosen insite the PARTITION statement where we have a "T3 DESC".
           SELECT ranked.*
           FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4) AS client_id_ranked -- we want the LAST t3 = invite time
@@ -149,7 +169,7 @@ view: cfms_poc {
           ) AS ranked
           WHERE ranked.client_id_ranked = 1
         ),
-        combined AS (
+        combined AS ( -- Combine it all together into a big table. Note that we still have duplicate entries here.
           SELECT
           welcome_table.client_id,
           finish_table.service_count,
@@ -174,7 +194,7 @@ view: cfms_poc {
           LEFT JOIN static.service_bc_office_info ON static.service_bc_office_info.id = chooseservice_table.office_id
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
-          finalset AS (
+          finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
             FROM (
               SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY welcome_time) AS client_id_ranked
@@ -183,7 +203,10 @@ view: cfms_poc {
             ) AS ranked
             WHERE ranked.client_id_ranked = 1
           )
-          SELECT finalset.*,
+          SELECT finalset.*,-- ADD in the aggregate calculations summed over each of the services for a given client_id.
+                            -- this is because the reception_duration only happens once per client
+                            -- waiting_duration and prep_duration can be per client or per service. This gives us the per client version
+                            -- below we use "sum_distinct" and "average_distinct" to report out on these versions
             SUM(c2.waiting_duration) AS waiting_duration_sum,
             SUM(c2.prep_duration) AS prep_duration_sum
           FROM finalset
@@ -205,9 +228,9 @@ view: cfms_poc {
             finalset.prep_duration,
             finalset.client_id_ranked
           ;;
-    sql_trigger_value: SELECT CURDATE() ;;
-    distribution_style: all
   }
+
+# Build measures and dimensions
 
   measure: count {
     type: count
@@ -241,6 +264,9 @@ view: cfms_poc {
     sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
   }
+
+  # See here to understand the use of sum_distinct and average_distinct:
+  #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
   measure: waiting_duration_sum {
     type: sum_distinct
     sql_distinct_key: ${TABLE}.client_id;;
@@ -388,7 +414,7 @@ view: cfms_poc {
     sql: ${TABLE}.inaccurate_time ;;
   }
 
-
+# TO FIX "set: detail"
   set: detail {
     fields: [
       client_id,
