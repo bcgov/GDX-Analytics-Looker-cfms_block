@@ -205,6 +205,8 @@ view: cfms_poc {
             finalset.prep_duration,
             finalset.client_id_ranked
           ;;
+    sql_trigger_value: SELECT CURDATE() ;;
+    distribution_style: all
   }
 
   measure: count {
