@@ -1,3 +1,5 @@
+# This view provides the "RAW" constructed server logs. It pulls together data from SBC logs and GDX logs.
+
 view: cats {
   derived_table: {
     sql: SELECT govdate,

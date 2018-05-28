@@ -6,7 +6,7 @@ week_start_day: sunday
 # include all views in this project
 include: "*.view"
 
-# include all dashboards in this project
+# For now, don't include the dashboard we built. There is an editable version in the Shared -> Service BC Folder
 # include: "*.dashboard"
 
 explore: cfms_poc {}
