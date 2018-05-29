@@ -134,6 +134,7 @@ view: cfms_poc {
           stand_time AS t2,
           invite_time AS t3,
           start_time AS t4,
+          finish_time AS t5,
           welcome_table.client_id,
           finish_table.service_count,
           CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL) THEN DATEDIFF(seconds, welcome_time, stand_time)
@@ -144,7 +145,10 @@ view: cfms_poc {
               END AS waiting_duration,
           CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
-              END AS prep_duration
+              END AS prep_duration,
+          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, start_time, finish_time)
+              ELSE NULL
+              END AS serve_duration
 
           FROM welcome_table
           LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
@@ -154,18 +158,20 @@ view: cfms_poc {
           ORDER BY welcome_time, stand_time, invite_time, start_time
         ),
         finalcalc AS (-- This is where we choose the correct one.
+                      -- this rank needs to be matched below where we pick final set
                       -- NOTE: we want the:
                         -- first: welcome time (t1)
                         -- first: stand time (t2)
                         -- LAST: invite time (t3)
-                        -- first: start time (t4)
+                        -- LAST: start time (t4)
+                        -- first: finish_time (t5)
                       -- These are selected using the ROW_NUMBER partition method below.
                       -- NOTE: the ordering is chosen insite the PARTITION statement where we have a "T3 DESC".
           SELECT ranked.*
           FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4) AS client_id_ranked -- we want the LAST t3 = invite time
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4 DESC, t5) AS client_id_ranked -- we want the LAST t3 = invite time
             FROM calculations
-            ORDER BY client_id, service_count, t1, t2, t3 DESC, t4
+            ORDER BY client_id, service_count, t1, t2, t3 DESC, t4 DESC, t5
           ) AS ranked
           WHERE ranked.client_id_ranked = 1
         ),
@@ -184,7 +190,8 @@ view: cfms_poc {
           welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
           c1.reception_duration,
           c1.waiting_duration,
-          c1.prep_duration
+          c1.prep_duration,
+          c1.serve_duration
           FROM welcome_table
           LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
           LEFT JOIN finish_table ON welcome_table.client_id = finish_table.client_id
@@ -197,9 +204,10 @@ view: cfms_poc {
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
             FROM (
-              SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY welcome_time) AS client_id_ranked
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY welcome_time, stand_time, invite_time DESC, start_time DESC, finish_time) AS client_id_ranked
+                                            -- NOTE: the sort ordering here must match the order in finalcalc above
               FROM combined
-              ORDER BY client_id, welcome_time
+              ORDER BY welcome_time, client_id, service_count
             ) AS ranked
             WHERE ranked.client_id_ranked = 1
           )
@@ -208,7 +216,8 @@ view: cfms_poc {
                             -- waiting_duration and prep_duration can be per client or per service. This gives us the per client version
                             -- below we use "sum_distinct" and "average_distinct" to report out on these versions
             SUM(c2.waiting_duration) AS waiting_duration_sum,
-            SUM(c2.prep_duration) AS prep_duration_sum
+            SUM(c2.prep_duration) AS prep_duration_sum,
+            SUM(c2.serve_duration) AS serve_duration_sum
           FROM finalset
           JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
           WHERE finalset.client_id_ranked = 1
@@ -226,6 +235,7 @@ view: cfms_poc {
             finalset.reception_duration,
             finalset.waiting_duration,
             finalset.prep_duration,
+            finalset.serve_duration,
             finalset.client_id_ranked
           ;;
   }
@@ -307,6 +317,35 @@ view: cfms_poc {
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
   }
+
+  dimension: serve_duration {
+    type:  number
+    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+  }
+  measure: serve_duration_per_issue_sum {
+    type: sum
+    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+  }
+  measure: serve_duration_per_issue_average {
+    type:  average
+    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+  }
+  measure: serve_duration_sum {
+    type: sum_distinct
+    sql_distinct_key: ${TABLE}.client_id;;
+    sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+  }
+  measure: serve_duration_average {
+    type: average_distinct
+    sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+    sql_distinct_key: ${TABLE}.client_id;;
+    value_format: "[h]:mm:ss"
+  }
+
 
   dimension: welcome_time {
     type: date_time
