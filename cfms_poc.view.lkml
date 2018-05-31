@@ -238,6 +238,8 @@ view: cfms_poc {
             finalset.serve_duration,
             finalset.client_id_ranked
           ;;
+          persist_for: "1 hour"
+          distribution_style: all
   }
 
 # Build measures and dimensions
@@ -251,28 +253,33 @@ view: cfms_poc {
     type:  average
     sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
   dimension: reception_duration {
     type:  number
     sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
   dimension: waiting_duration {
     type:  number
     sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: waiting_duration_per_issue_sum {
     type: sum
     sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: waiting_duration_per_issue_average {
     type:  average
     sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
   # See here to understand the use of sum_distinct and average_distinct:
@@ -282,126 +289,150 @@ view: cfms_poc {
     sql_distinct_key: ${TABLE}.client_id;;
     sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: waiting_duration_average {
     type: average_distinct
     sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
   dimension: prep_duration {
     type:  number
     sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: prep_duration_per_issue_sum {
     type: sum
     sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: prep_duration_per_issue_average {
     type:  average
     sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: prep_duration_sum {
     type: sum_distinct
     sql_distinct_key: ${TABLE}.client_id;;
     sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: prep_duration_average {
     type: average_distinct
     sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
   dimension: serve_duration {
     type:  number
     sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: serve_duration_per_issue_sum {
     type: sum
     sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: serve_duration_per_issue_average {
     type:  average
     sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: serve_duration_sum {
     type: sum_distinct
     sql_distinct_key: ${TABLE}.client_id;;
     sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
   measure: serve_duration_average {
     type: average_distinct
     sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
     sql_distinct_key: ${TABLE}.client_id;;
     value_format: "[h]:mm:ss"
+    group_label: "Durations"
   }
 
 
   dimension: welcome_time {
     type: date_time
     sql: ${TABLE}.welcome_time ;;
+    group_label: "Timing Points"
   }
 
   dimension: date {
     type:  date
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
   dimension: week {
     type:  date_week
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
   dimension: month {
     type:  date_month_name
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
   dimension: year {
     type:  date_year
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
 
   dimension: day_of_month {
     type:  date_day_of_month
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
   dimension: day_of_week {
     type:  date_day_of_week
     sql:  ${TABLE}.welcome_time ;;
+    group_label: "Date"
   }
 
   dimension: stand_time {
     type: date_time
     sql: ${TABLE}.stand_time ;;
+    group_label: "Timing Points"
   }
 
   dimension: invite_time {
     type: date_time
     sql: ${TABLE}.invite_time ;;
+    group_label: "Timing Points"
   }
 
   dimension: start_time {
     type: date_time
     sql: ${TABLE}.start_time ;;
+    group_label: "Timing Points"
   }
 
   dimension: chooseservice_time {
     type: date_time
     sql:  ${TABLE}.chooseservice_time ;;
+    group_label: "Timing Points"
   }
 
 
   dimension: finish_time {
     type: date_time
     sql: ${TABLE}.finish_time ;;
+    group_label: "Timing Points"
   }
 
   dimension: client_id {
