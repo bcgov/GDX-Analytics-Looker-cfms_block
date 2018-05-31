@@ -238,6 +238,7 @@ view: cfms_poc {
             finalset.serve_duration,
             finalset.client_id_ranked
           ;;
+          # https://docs.looker.com/data-modeling/learning-lookml/caching
           persist_for: "1 hour"
           distribution_style: all
   }
