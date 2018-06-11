@@ -9,5 +9,10 @@ include: "*.view"
 # For now, don't include the dashboard we built. There is an editable version in the Shared -> Service BC Folder
 # include: "*.dashboard"
 
-explore: cfms_poc {}
+explore: cfms_poc {
+  access_filter: {
+    field: office_name
+    user_attribute: location
+  }
+}
 explore: cats {}
