@@ -221,6 +221,8 @@ view: cfms_poc {
           FROM finalset
           JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
           WHERE finalset.client_id_ranked = 1
+            AND program_name IS NOT NULL
+            AND office_name IS NOT NULL
           GROUP BY finalset.client_id,
             finalset.service_count,
             finalset.office_id,
@@ -238,6 +240,7 @@ view: cfms_poc {
             finalset.serve_duration,
             finalset.client_id_ranked
           ;;
+          # https://docs.looker.com/data-modeling/learning-lookml/caching
           persist_for: "1 hour"
           distribution_style: all
   }
