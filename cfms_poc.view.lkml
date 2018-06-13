@@ -224,7 +224,7 @@ view: cfms_poc {
           welcome_table.client_id,
           finish_table.service_count,
           welcome_table.office_id,
-          office_info.locality AS office_name,
+          service_bc_office_info.name AS office_name,
           welcome_table.agent_id,
           chooseservice_table.program_id,
           chooseservice_table.program_name,
@@ -245,7 +245,7 @@ view: cfms_poc {
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
           LEFT JOIN hold_table ON welcome_table.client_id = hold_table.client_id AND finish_table.service_count = hold_table.service_count
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
-          LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id
+          LEFT JOIN static.service_bc_office_info ON static.service_bc_office_info.id = chooseservice_table.office_id
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
@@ -288,6 +288,7 @@ view: cfms_poc {
             finalset.hold_duration,
             finalset.serve_duration,
             finalset.client_id_ranked
+          ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
       persist_for: "1 hour"
@@ -308,19 +309,19 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    dimension: reception_duration {
-      type:  number
-      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Durations"
-    }
+    #dimension: reception_duration {
+    #  type:  number
+    #  sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+    #  value_format: "[h]:mm:ss"
+    #  group_label: "Durations"
+    #}
 
-    dimension: waiting_duration {
-      type:  number
-      sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Durations"
-    }
+    #dimension: waiting_duration {
+    #  type:  number
+    #  sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
+    #  value_format: "[h]:mm:ss"
+    #  group_label: "Durations"
+    #}
     measure: waiting_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
@@ -351,12 +352,12 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    dimension: prep_duration {
-      type:  number
-      sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Durations"
-    }
+    #dimension: prep_duration {
+    #  type:  number
+    #  sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+    #  value_format: "[h]:mm:ss"
+    #  group_label: "Durations"
+    #}
     measure: prep_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
@@ -384,12 +385,12 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    dimension: hold_duration {
-      type:  number
-      sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Durations"
-    }
+    #dimension: hold_duration {
+    #  type:  number
+    #  sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
+    #  value_format: "[h]:mm:ss"
+    #  group_label: "Durations"
+    #}
     measure: hold_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
@@ -417,12 +418,12 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    measure: serve_duration {
-      type:  number
-      sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Durations"
-    }
+    #measure: serve_duration {
+    #  type:  number
+    #  sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+    #  value_format: "[h]:mm:ss"
+    #  group_label: "Durations"
+    #}
     measure: serve_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
