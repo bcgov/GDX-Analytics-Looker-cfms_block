@@ -90,6 +90,34 @@ view: cfms_poc {
           WHERE event_name in ('beginservice')
           ORDER BY event_time
           ),
+        hold_table AS( -- This CTE captures all events that could trigger a "Hold time".
+                        -- This occurs when the "beginservice" event is hit
+          SELECT
+            event_name,
+            event_time,
+            client_id,
+            service_count,
+            office_id,
+            agent_id,
+            event_time hold_time
+          FROM step1
+          WHERE event_name in ('hold')
+          ORDER BY event_time
+          ),
+        invitefromhold_table AS( -- This CTE captures all events that could trigger a "Invite from Hold time".
+                        -- This occurs when the "beginservice" event is hit
+          SELECT
+            event_name,
+            event_time,
+            client_id,
+            service_count,
+            office_id,
+            agent_id,
+            event_time invitefromhold_time
+          FROM step1
+          WHERE event_name in ('invitefromhold')
+          ORDER BY event_time
+          ),
         finish_table AS( -- This CTE captures all events that could trigger a "Finish time".
                         -- This occurs when the "finish" or "custermleft" event is hit
                         -- NOTE: there is also a count and inacurate_time flag here
@@ -128,13 +156,27 @@ view: cfms_poc {
           WHERE event_name in ('chooseservice')
           ORDER BY event_time DESC
           ),
+        hold_calculations AS ( --  build hold calculations. For a given client_id+service_count we use  Sum of all (invitefromhold – hold) = sum (invitefromhold) - sum(hold)
+          SELECT
+            client_id,
+            service_count,
+            SUM(CASE WHEN event_name = 'hold' THEN DATEDIFF(seconds, event_time, current_date) END) +
+            SUM(CASE WHEN event_name = 'invitefromhold' THEN DATEDIFF(seconds, current_date, event_time) END) AS hold_duration,
+            COUNT( CASE WHEN event_name = 'hold' THEN 1 END) AS hold_count,
+            COUNT( CASE WHEN event_name = 'invitefromhold' THEN 1 END) AS invitefromhold_count,
+            -- "holdparity" if the number of hold and invitehold calls aren't balanced, we'll exclude these from caluclations below
+            COUNT( CASE WHEN event_name = 'hold' THEN 1 END) - COUNT( CASE WHEN event_name = 'invitefromhold' THEN 1 END) AS holdparity
+          FROM step1
+          WHERE event_name in ('hold','invitefromhold')
+          GROUP BY client_id, service_count
+          ),
         calculations AS ( -- Here we build an array of all possible calcultation combinations
           SELECT
-          welcome_time AS t1,
-          stand_time AS t2,
-          invite_time AS t3,
-          start_time AS t4,
-          finish_time AS t5,
+          welcome_time as t1,
+          stand_time as t2,
+          invite_time as t3,
+          start_time as t4,
+          finish_time as t5,
           welcome_table.client_id,
           finish_table.service_count,
           CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL) THEN DATEDIFF(seconds, welcome_time, stand_time)
@@ -146,7 +188,8 @@ view: cfms_poc {
           CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
               END AS prep_duration,
-          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, start_time, finish_time)
+          COALESCE(hold_duration,0) AS hold_duration,
+          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, start_time, finish_time) - COALESCE(hold_duration,0)
               ELSE NULL
               END AS serve_duration
 
@@ -155,6 +198,7 @@ view: cfms_poc {
           LEFT JOIN finish_table ON welcome_table.client_id = finish_table.client_id
           LEFT JOIN invite_table ON welcome_table.client_id = invite_table.client_id AND finish_table.service_count = invite_table.service_count
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
+          LEFT JOIN hold_calculations ON finish_table.client_id = hold_calculations.client_id AND finish_table.service_count = hold_calculations.service_count
           ORDER BY welcome_time, stand_time, invite_time, start_time
         ),
         finalcalc AS (-- This is where we choose the correct one.
@@ -166,10 +210,10 @@ view: cfms_poc {
                         -- LAST: start time (t4)
                         -- first: finish_time (t5)
                       -- These are selected using the ROW_NUMBER partition method below.
-                      -- NOTE: the ordering is chosen insite the PARTITION statement where we have a "T3 DESC".
+                      -- NOTE: the ordering is chosen insite the PARTITION statement where we have a "t3 DESC".
           SELECT ranked.*
           FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4 DESC, t5) AS client_id_ranked -- we want the LAST t3 = invite time
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4 DESC, t5) AS client_id_ranked -- we want the LAST invite_time = invite time
             FROM calculations
             ORDER BY client_id, service_count, t1, t2, t3 DESC, t4 DESC, t5
           ) AS ranked
@@ -180,17 +224,18 @@ view: cfms_poc {
           welcome_table.client_id,
           finish_table.service_count,
           welcome_table.office_id,
-          service_bc_office_info.name AS office_name,
+          office_info.locality AS office_name,
           welcome_table.agent_id,
           chooseservice_table.program_id,
           chooseservice_table.program_name,
           transaction_name,
           chooseservice_table.channel,
           finish_table.inaccurate_time,
-          welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
+          welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
           c1.reception_duration,
           c1.waiting_duration,
           c1.prep_duration,
+          c1.hold_duration,
           c1.serve_duration
           FROM welcome_table
           LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
@@ -198,7 +243,9 @@ view: cfms_poc {
           LEFT JOIN invite_table ON welcome_table.client_id = invite_table.client_id AND finish_table.service_count = invite_table.service_count
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
-          LEFT JOIN static.service_bc_office_info ON static.service_bc_office_info.id = chooseservice_table.office_id
+          LEFT JOIN hold_table ON welcome_table.client_id = hold_table.client_id AND finish_table.service_count = hold_table.service_count
+          LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
+          LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
@@ -217,6 +264,7 @@ view: cfms_poc {
                             -- below we use "sum_distinct" and "average_distinct" to report out on these versions
             SUM(c2.waiting_duration) AS waiting_duration_sum,
             SUM(c2.prep_duration) AS prep_duration_sum,
+            SUM(c2.hold_duration) AS hold_duration_sum,
             SUM(c2.serve_duration) AS serve_duration_sum
           FROM finalset
           JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
@@ -233,280 +281,324 @@ view: cfms_poc {
             transaction_name,
             channel,
             inaccurate_time,
-            welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time,
+            welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
             finalset.reception_duration,
             finalset.waiting_duration,
             finalset.prep_duration,
+            finalset.hold_duration,
             finalset.serve_duration,
             finalset.client_id_ranked
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
-          persist_for: "1 hour"
-          distribution_style: all
-  }
+      persist_for: "1 hour"
+      distribution_style: all
+    }
 
 # Build measures and dimensions
 
-  measure: count {
-    type: count
-    drill_fields: [detail*]
-  }
+    measure: count {
+      type: count
+      drill_fields: [detail*]
+    }
 
-  measure: reception_duration_average {
-    type:  average
-    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    measure: reception_duration_average {
+      type:  average
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-  dimension: reception_duration {
-    type:  number
-    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    dimension: reception_duration {
+      type:  number
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-  dimension: waiting_duration {
-    type:  number
-    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: waiting_duration_per_issue_sum {
-    type: sum
-    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: waiting_duration_per_issue_average {
-    type:  average
-    sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    dimension: waiting_duration {
+      type:  number
+      sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: waiting_duration_per_issue_sum {
+      type: sum
+      sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: waiting_duration_per_issue_average {
+      type:  average
+      sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-  # See here to understand the use of sum_distinct and average_distinct:
-  #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
-  measure: waiting_duration_sum {
-    type: sum_distinct
-    sql_distinct_key: ${TABLE}.client_id;;
-    sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: waiting_duration_average {
-    type: average_distinct
-    sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
-    sql_distinct_key: ${TABLE}.client_id;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    # See here to understand the use of sum_distinct and average_distinct:
+    #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
+    measure: waiting_duration_sum {
+      type: sum_distinct
+      sql_distinct_key: ${TABLE}.client_id;;
+      sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: waiting_duration_average {
+      type: average_distinct
+      sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
+      sql_distinct_key: ${TABLE}.client_id;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-  dimension: prep_duration {
-    type:  number
-    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: prep_duration_per_issue_sum {
-    type: sum
-    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: prep_duration_per_issue_average {
-    type:  average
-    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: prep_duration_sum {
-    type: sum_distinct
-    sql_distinct_key: ${TABLE}.client_id;;
-    sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: prep_duration_average {
-    type: average_distinct
-    sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
-    sql_distinct_key: ${TABLE}.client_id;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    dimension: prep_duration {
+      type:  number
+      sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: prep_duration_per_issue_sum {
+      type: sum
+      sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: prep_duration_per_issue_average {
+      type:  average
+      sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: prep_duration_sum {
+      type: sum_distinct
+      sql_distinct_key: ${TABLE}.client_id;;
+      sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: prep_duration_average {
+      type: average_distinct
+      sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
+      sql_distinct_key: ${TABLE}.client_id;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-  dimension: serve_duration {
-    type:  number
-    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: serve_duration_per_issue_sum {
-    type: sum
-    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: serve_duration_per_issue_average {
-    type:  average
-    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: serve_duration_sum {
-    type: sum_distinct
-    sql_distinct_key: ${TABLE}.client_id;;
-    sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
-  measure: serve_duration_average {
-    type: average_distinct
-    sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
-    sql_distinct_key: ${TABLE}.client_id;;
-    value_format: "[h]:mm:ss"
-    group_label: "Durations"
-  }
+    dimension: hold_duration {
+      type:  number
+      sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: hold_duration_per_issue_sum {
+      type: sum
+      sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: hold_duration_per_issue_average {
+      type:  average
+      sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: hold_duration_sum {
+      type: sum_distinct
+      sql_distinct_key: ${TABLE}.client_id;;
+      sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: hold_duration_average {
+      type: average_distinct
+      sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
+      sql_distinct_key: ${TABLE}.client_id;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
-
-  dimension: welcome_time {
-    type: date_time
-    sql: ${TABLE}.welcome_time ;;
-    group_label: "Timing Points"
-  }
-
-  dimension: date {
-    type:  date
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-  dimension: week {
-    type:  date_week
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-  dimension: month {
-    type:  date_month_name
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-  dimension: year {
-    type:  date_year
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-
-  dimension: day_of_month {
-    type:  date_day_of_month
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-  dimension: day_of_week {
-    type:  date_day_of_week
-    sql:  ${TABLE}.welcome_time ;;
-    group_label: "Date"
-  }
-
-  dimension: stand_time {
-    type: date_time
-    sql: ${TABLE}.stand_time ;;
-    group_label: "Timing Points"
-  }
-
-  dimension: invite_time {
-    type: date_time
-    sql: ${TABLE}.invite_time ;;
-    group_label: "Timing Points"
-  }
-
-  dimension: start_time {
-    type: date_time
-    sql: ${TABLE}.start_time ;;
-    group_label: "Timing Points"
-  }
-
-  dimension: chooseservice_time {
-    type: date_time
-    sql:  ${TABLE}.chooseservice_time ;;
-    group_label: "Timing Points"
-  }
+    measure: serve_duration {
+      type:  number
+      sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: serve_duration_per_issue_sum {
+      type: sum
+      sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: serve_duration_per_issue_average {
+      type:  average
+      sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: serve_duration_sum {
+      type: sum_distinct
+      sql_distinct_key: ${TABLE}.client_id;;
+      sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    measure: serve_duration_average {
+      type: average_distinct
+      sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+      sql_distinct_key: ${TABLE}.client_id;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
 
 
-  dimension: finish_time {
+    dimension: welcome_time {
+      type: date_time
+      sql: ${TABLE}.welcome_time ;;
+      group_label: "Timing Points"
+    }
+
+    dimension: date {
+      type:  date
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+    dimension: week {
+      type:  date_week
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+    dimension: month {
+      type:  date_month_name
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+    dimension: year {
+      type:  date_year
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+
+    dimension: day_of_month {
+      type:  date_day_of_month
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+    dimension: day_of_week {
+      type:  date_day_of_week
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+
+    dimension: stand_time {
+      type: date_time
+      sql: ${TABLE}.stand_time ;;
+      group_label: "Timing Points"
+    }
+
+    dimension: invite_time {
+      type: date_time
+      sql: ${TABLE}.invite_time ;;
+      group_label: "Timing Points"
+    }
+
+    dimension: start_time {
+      type: date_time
+      sql: ${TABLE}.start_time ;;
+      group_label: "Timing Points"
+    }
+
+    dimension: chooseservice_time {
+      type: date_time
+      sql:  ${TABLE}.chooseservice_time ;;
+      group_label: "Timing Points"
+    }
+
+
+   dimension: finish_time {
     type: date_time
     sql: ${TABLE}.finish_time ;;
     group_label: "Timing Points"
   }
-
-  dimension: client_id {
-    type: number
-    sql: ${TABLE}.client_id ;;
+  dimension: hold_time {
+    type: date_time
+    sql: ${TABLE}.hold_time ;;
+    group_label: "Timing Points"
+  }
+  dimension: invitefromhold_time {
+    type: date_time
+    sql: ${TABLE}.invitefromhold_time ;;
+    group_label: "Timing Points"
   }
 
-  dimension: service_count {
-    type: number
-    sql:  ${TABLE}.service_count ;;
-  }
-  dimension: office_id {
-    type: number
-    sql: ${TABLE}.office_id ;;
-  }
+    dimension: client_id {
+      type: number
+      sql: ${TABLE}.client_id ;;
+    }
 
-  dimension: office_name {
-    type:  string
-    sql:  ${TABLE}.office_name ;;
-  }
+    dimension: service_count {
+      type: number
+      sql:  ${TABLE}.service_count ;;
+    }
+    dimension: office_id {
+      type: number
+      sql: ${TABLE}.office_id ;;
+    }
 
-  dimension: agent_id {
-    type: number
-    sql: ${TABLE}.agent_id ;;
-  }
+    dimension: office_name {
+      type:  string
+      sql:  ${TABLE}.office_name ;;
+    }
 
-  dimension: program_id {
-    type: number
-    sql: ${TABLE}.program_id ;;
-  }
+    dimension: agent_id {
+      type: number
+      sql: ${TABLE}.agent_id ;;
+    }
 
-  dimension: program_name {
-    type: string
-    sql: ${TABLE}.program_name ;;
-  }
+    dimension: program_id {
+      type: number
+      sql: ${TABLE}.program_id ;;
+    }
 
-  dimension: transaction_name {
-    type: string
-    sql: ${TABLE}.transaction_name ;;
-  }
+    dimension: program_name {
+      type: string
+      sql: ${TABLE}.program_name ;;
+    }
 
-  dimension: channel {
-    type: string
-    sql: ${TABLE}.channel ;;
-  }
+    dimension: transaction_name {
+      type: string
+      sql: ${TABLE}.transaction_name ;;
+    }
 
-  dimension: inaccurate_time {
-    type: yesno
-    sql: ${TABLE}.inaccurate_time ;;
-  }
+    dimension: channel {
+      type: string
+      sql: ${TABLE}.channel ;;
+    }
+
+    dimension: inaccurate_time {
+      type: yesno
+      sql: ${TABLE}.inaccurate_time ;;
+    }
 
 # TO FIX "set: detail"
-  set: detail {
-    fields: [
-      client_id,
-      service_count,
-      office_id,
-      office_name,
-      agent_id,
-      program_id,
-      program_name,
-      transaction_name,
-      channel,
-      inaccurate_time,
-      welcome_time,
-      stand_time,
-      invite_time,
-      start_time,
-      chooseservice_time,
-      finish_time,
-      date
-    ]
+    set: detail {
+      fields: [
+        client_id,
+        service_count,
+        office_id,
+        office_name,
+        agent_id,
+        program_id,
+        program_name,
+        transaction_name,
+        channel,
+        inaccurate_time,
+        welcome_time,
+        stand_time,
+        invite_time,
+        start_time,
+        chooseservice_time,
+        finish_time,
+        date
+      ]
+    }
   }
-}
