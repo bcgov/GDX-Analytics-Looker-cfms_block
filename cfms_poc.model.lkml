@@ -18,3 +18,5 @@ explore: cfms_poc {}
 #}
 
 explore: cats {}
+
+explore: cfms_all_events {}
