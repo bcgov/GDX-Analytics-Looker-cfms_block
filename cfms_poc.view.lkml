@@ -265,9 +265,19 @@ view: cfms_poc {
             SUM(c2.waiting_duration) AS waiting_duration_sum,
             SUM(c2.prep_duration) AS prep_duration_sum,
             SUM(c2.hold_duration) AS hold_duration_sum,
-            SUM(c2.serve_duration) AS serve_duration_sum
+            SUM(c2.serve_duration) AS serve_duration_sum,
+            dd.isweekend,
+            dd.isholiday,
+            dd.fiscalyear, dd.fiscalmonth, dd.fiscalquarter, dd.sbcquarter, dd.lastdayofpsapayperiod::date,
+            to_char(welcome_time, 'HH24:00-HH24:59') AS hourly_bucket,
+            CASE WHEN date_part(minute, welcome_time) < 30
+                THEN to_char(welcome_time, 'HH24:00-HH24:29')
+                ELSE to_char(welcome_time, 'HH24:30-HH24:59')
+            END AS half_hour_bucket,
+            to_char(welcome_time, 'HH24:MI:SS') AS date_time_of_day
           FROM finalset
           JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
+          JOIN servicebc.datedimension AS dd on welcome_time::date = dd.datekey::date
           WHERE finalset.client_id_ranked = 1
             AND program_name IS NOT NULL
             AND office_name IS NOT NULL
@@ -287,7 +297,10 @@ view: cfms_poc {
             finalset.prep_duration,
             finalset.hold_duration,
             finalset.serve_duration,
-            finalset.client_id_ranked
+            finalset.client_id_ranked,
+            dd.isweekend,
+            dd.isholiday,
+            dd.fiscalyear, dd.fiscalmonth, dd.fiscalquarter, dd.sbcquarter, dd.lastdayofpsapayperiod::date
           ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
@@ -299,7 +312,7 @@ view: cfms_poc {
 
     measure: count {
       type: count
-      drill_fields: [detail*]
+      #  drill_fields: [detail*]
     }
 
     measure: reception_duration_average {
@@ -458,6 +471,23 @@ view: cfms_poc {
       group_label: "Timing Points"
     }
 
+    dimension: time {
+      type: string
+      sql: ${TABLE}.date_time_of_day ;;
+      group_label: "Date"
+    }
+
+    dimension: hourly_bucket {
+      type: string
+      sql: ${TABLE}.hourly_bucket ;;
+      group_label: "Date"
+    }
+    dimension: half_hour_bucket {
+      type: string
+      sql: ${TABLE}.half_hour_bucket ;;
+      group_label: "Date"
+    }
+
     dimension: date {
       type:  date
       sql:  ${TABLE}.welcome_time ;;
@@ -489,6 +519,52 @@ view: cfms_poc {
       sql:  ${TABLE}.welcome_time ;;
       group_label: "Date"
     }
+    dimension: day_of_week_number {
+      type:  date_day_of_week_index
+      sql:  ${TABLE}.welcome_time + interval '1 day' ;;
+      group_label: "Date"
+    }
+    dimension: week_number {
+      type:  date_week
+      sql:  ${TABLE}.welcome_time ;;
+      group_label: "Date"
+    }
+
+    dimension: is_weekend {
+      type:  yesno
+      sql:  ${TABLE}.isweekend ;;
+      group_label:  "Date"
+    }
+    dimension: is_holiday {
+      type:  yesno
+      sql:  ${TABLE}.isholiday ;;
+      group_label:  "Date"
+    }
+    dimension: fiscal_year {
+      type:  number
+      sql:  ${TABLE}.fiscalyear ;;
+      group_label:  "Date"
+    }
+    dimension: fiscal_month {
+      type:  number
+      sql:  ${TABLE}.fiscalmonth ;;
+      group_label:  "Date"
+    }
+    dimension: fiscal_quarter {
+      type:  number
+      sql:  ${TABLE}.fiscalquarter ;;
+      group_label:  "Date"
+    }
+    dimension: sbc_quarter {
+      type:  string
+      sql:  ${TABLE}.sbcquarter ;;
+      group_label:  "Date"
+    }
+    dimension: last_day_of_pay_period {
+      type: date
+      sql:  ${TABLE}.lastdayofpsapayperiod ;;
+      group_label: "Date"
+    }
 
     dimension: stand_time {
       type: date_time
@@ -515,21 +591,21 @@ view: cfms_poc {
     }
 
 
-   dimension: finish_time {
-    type: date_time
-    sql: ${TABLE}.finish_time ;;
-    group_label: "Timing Points"
-  }
-  dimension: hold_time {
-    type: date_time
-    sql: ${TABLE}.hold_time ;;
-    group_label: "Timing Points"
-  }
-  dimension: invitefromhold_time {
-    type: date_time
-    sql: ${TABLE}.invitefromhold_time ;;
-    group_label: "Timing Points"
-  }
+    dimension: finish_time {
+      type: date_time
+      sql: ${TABLE}.finish_time ;;
+      group_label: "Timing Points"
+    }
+    dimension: hold_time {
+      type: date_time
+      sql: ${TABLE}.hold_time ;;
+      group_label: "Timing Points"
+    }
+    dimension: invitefromhold_time {
+      type: date_time
+      sql: ${TABLE}.invitefromhold_time ;;
+      group_label: "Timing Points"
+    }
 
     dimension: client_id {
       type: number
@@ -578,28 +654,5 @@ view: cfms_poc {
     dimension: inaccurate_time {
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
-    }
-
-# TO FIX "set: detail"
-    set: detail {
-      fields: [
-        client_id,
-        service_count,
-        office_id,
-        office_name,
-        agent_id,
-        program_id,
-        program_name,
-        transaction_name,
-        channel,
-        inaccurate_time,
-        welcome_time,
-        stand_time,
-        invite_time,
-        start_time,
-        chooseservice_time,
-        finish_time,
-        date
-      ]
     }
   }
