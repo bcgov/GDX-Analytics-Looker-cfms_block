@@ -268,7 +268,7 @@ view: cfms_poc {
             SUM(c2.serve_duration) AS serve_duration_sum,
             dd.isweekend,
             dd.isholiday,
-            dd.fiscalyear, dd.fiscalmonth, dd.fiscalquarter, dd.sbcquarter, dd.lastdayofpsapayperiod::date,
+            dd.sbcquarter, dd.lastdayofpsapayperiod::date,
             to_char(welcome_time, 'HH24:00-HH24:59') AS hourly_bucket,
             CASE WHEN date_part(minute, welcome_time) < 30
                 THEN to_char(welcome_time, 'HH24:00-HH24:29')
@@ -301,7 +301,7 @@ view: cfms_poc {
             finalset.client_id_ranked,
             dd.isweekend,
             dd.isholiday,
-            dd.fiscalyear, dd.fiscalmonth, dd.fiscalquarter, dd.sbcquarter, dd.lastdayofpsapayperiod::date
+            dd.sbcquarter, dd.lastdayofpsapayperiod::date
           ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
@@ -323,19 +323,6 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    #dimension: reception_duration {
-    #  type:  number
-    #  sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-    #  value_format: "[h]:mm:ss"
-    #  group_label: "Durations"
-    #}
-
-    #dimension: waiting_duration {
-    #  type:  number
-    #  sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
-    #  value_format: "[h]:mm:ss"
-    #  group_label: "Durations"
-    #}
     measure: waiting_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
@@ -432,12 +419,6 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    #measure: serve_duration {
-    #  type:  number
-    #  sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
-    #  value_format: "[h]:mm:ss"
-    #  group_label: "Durations"
-    #}
     measure: serve_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
@@ -495,7 +476,7 @@ view: cfms_poc {
       group_label: "Date"
     }
     dimension: week {
-      type:  date_week
+      type:  date_week_of_year
       sql:  ${TABLE}.welcome_time ;;
       group_label: "Date"
     }
@@ -525,11 +506,6 @@ view: cfms_poc {
       sql:  ${TABLE}.welcome_time + interval '1 day' ;;
       group_label: "Date"
     }
-    dimension: week_number {
-      type:  date_week
-      sql:  ${TABLE}.welcome_time ;;
-      group_label: "Date"
-    }
 
     dimension: is_weekend {
       type:  yesno
@@ -542,18 +518,23 @@ view: cfms_poc {
       group_label:  "Date"
     }
     dimension: fiscal_year {
-      type:  number
-      sql:  ${TABLE}.fiscalyear ;;
+      type:  date_fiscal_year
+      sql:  ${TABLE}.welcome_time ;;
       group_label:  "Date"
     }
     dimension: fiscal_month {
-      type:  number
-      sql:  ${TABLE}.fiscalmonth ;;
+      type:  date_fiscal_month_num
+      sql:  ${TABLE}.welcome_time ;;
       group_label:  "Date"
     }
     dimension: fiscal_quarter {
-      type:  number
-      sql:  ${TABLE}.fiscalquarter ;;
+      type:  date_fiscal_quarter
+      sql:  ${TABLE}.welcome_time ;;
+      group_label:  "Date"
+    }
+    dimension: fiscal_quarter_of_year {
+      type:  date_fiscal_quarter_of_year
+      sql:  ${TABLE}.welcome_time ;;
       group_label:  "Date"
     }
     dimension: sbc_quarter {
