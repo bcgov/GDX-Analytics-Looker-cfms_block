@@ -276,11 +276,12 @@ view: cfms_poc {
             END AS half_hour_bucket,
             to_char(welcome_time, 'HH24:MI:SS') AS date_time_of_day
           FROM finalset
-          JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
+          LEFT JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id AND inaccurate_time <> True
           JOIN servicebc.datedimension AS dd on welcome_time::date = dd.datekey::date
           WHERE finalset.client_id_ranked = 1
             AND program_name IS NOT NULL
             AND office_name IS NOT NULL
+            AND office_name <> ''
           GROUP BY finalset.client_id,
             finalset.service_count,
             finalset.office_id,
