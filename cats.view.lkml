@@ -7,7 +7,7 @@ view: cats {
           SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) AS url,
           SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2) AS query,
           SPLIT_PART(SPLIT_PART(REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*'), '=',2), '&', 1) AS search,
-          REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
+          -- REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
           refer,
           site,
           gdx_id,
