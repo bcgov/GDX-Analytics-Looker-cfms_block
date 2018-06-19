@@ -30,6 +30,9 @@ view: cats {
           LEFT JOIN static.cats_info ON static.cats_info.asset_tag = sbc.source_host_name
           JOIN servicebc.datedimension AS dd on govdate::date = dd.datekey::date
           ;;
+    # https://docs.looker.com/data-modeling/learning-lookml/caching
+    persist_for: "4 hours"
+    distribution_style: all
   }
 
 
