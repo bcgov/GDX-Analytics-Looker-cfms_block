@@ -266,8 +266,8 @@ view: cfms_poc {
             SUM(c2.prep_duration) AS prep_duration_sum,
             SUM(c2.hold_duration) AS hold_duration_sum,
             SUM(c2.serve_duration) AS serve_duration_sum,
-            dd.isweekend,
-            dd.isholiday,
+            dd.isweekend::BOOLEAN,
+            dd.isholiday::BOOLEAN,
             dd.sbcquarter, dd.lastdayofpsapayperiod::date,
             to_char(welcome_time, 'HH24:00-HH24:59') AS hourly_bucket,
             CASE WHEN date_part(minute, welcome_time) < 30
