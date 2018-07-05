@@ -5,7 +5,8 @@ view: cfms_all_events {
       -- NOTE: we are ignoring instances where there is no client_id
       SELECT
       event_name,
-      CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS event_time,
+      -- CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS
+      event_time,
       client_id,
       service_count,
       office_id,
