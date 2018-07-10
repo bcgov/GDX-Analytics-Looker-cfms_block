@@ -225,7 +225,7 @@ view: cfms_poc {
           welcome_table.client_id,
           finish_table.service_count,
           welcome_table.office_id,
-          service_bc_office_info.name AS office_name,
+          office_info.site AS office_name,
           welcome_table.agent_id,
           chooseservice_table.program_id,
           chooseservice_table.program_name,
@@ -246,7 +246,7 @@ view: cfms_poc {
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
           LEFT JOIN hold_table ON welcome_table.client_id = hold_table.client_id AND finish_table.service_count = hold_table.service_count
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
-          LEFT JOIN static.service_bc_office_info ON static.service_bc_office_info.id = chooseservice_table.office_id
+          LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
@@ -267,6 +267,10 @@ view: cfms_poc {
             SUM(c2.prep_duration) AS prep_duration_sum,
             SUM(c2.hold_duration) AS hold_duration_sum,
             SUM(c2.serve_duration) AS serve_duration_sum,
+            (finalset.waiting_duration - avg(finalset.waiting_duration) over ()) / (stddev(finalset.waiting_duration) over ()) as waiting_duration_zscore,
+            (finalset.prep_duration - avg(finalset.prep_duration) over ()) / (stddev(finalset.prep_duration) over ()) as prep_duration_zscore,
+            (finalset.hold_duration - avg(finalset.hold_duration) over ()) / (stddev(finalset.hold_duration) over ()) as hold_duration_zscore,
+            (finalset.serve_duration - avg(finalset.serve_duration) over ()) / (stddev(finalset.serve_duration) over ()) as serve_duration_zscore,
             dd.isweekend::BOOLEAN,
             dd.isholiday::BOOLEAN,
             dd.sbcquarter, dd.lastdayofpsapayperiod::date,
@@ -387,12 +391,6 @@ view: cfms_poc {
       group_label: "Durations"
     }
 
-    #dimension: hold_duration {
-    #  type:  number
-    #  sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
-    #  value_format: "[h]:mm:ss"
-    #  group_label: "Durations"
-    #}
     measure: hold_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
@@ -448,11 +446,40 @@ view: cfms_poc {
     }
 
 
+
+    dimension: waiting_duration_zscore {
+      type:  yesno
+      sql: abs(${TABLE}.waiting_duration_zscore) >= 3 ;;
+      group_label: "Z-Scores"
+    }
+    dimension: prep_duration_zscore {
+      type:  yesno
+      sql: abs(${TABLE}.prep_duration_zscore) >= 3 ;;
+      group_label: "Z-Scores"
+    }
+    dimension: hold_duration_zscore {
+      type:  yesno
+      sql: abs(${TABLE}.hold_duration_zscore) >= 3 ;;
+      group_label: "Z-Scores"
+    }
+    dimension: serve_duration_zscore {
+      type:  yesno
+      sql: abs( ${TABLE}.serve_duration_zscore) >= 3;;
+      group_label: "Z-Scores"
+    }
+
+
     dimension: welcome_time {
       type: date_time
       sql: ${TABLE}.welcome_time ;;
       group_label: "Timing Points"
     }
+
+    measure: count_of_days {
+      type: number
+      sql: count(distinct date(${TABLE}.welcome_time));;
+    }
+
 
     dimension: time {
       type: string
@@ -593,6 +620,7 @@ view: cfms_poc {
     dimension: client_id {
       type: number
       sql: ${TABLE}.client_id ;;
+      html: {{ rendered_value }} ;;
     }
 
     dimension: service_count {
@@ -617,6 +645,7 @@ view: cfms_poc {
     dimension: program_id {
       type: number
       sql: ${TABLE}.program_id ;;
+      html: {{ rendered_value }} ;;
     }
 
     dimension: program_name {
