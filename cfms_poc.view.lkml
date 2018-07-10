@@ -11,6 +11,7 @@ view: cfms_poc {
             client_id,
             service_count,
             office_id,
+            office_type,
             agent_id,
             channel,
             program_id,
@@ -42,6 +43,7 @@ view: cfms_poc {
             client_id,
             service_count,
             office_id,
+            office_type,
             agent_id,
             event_time welcome_time
           FROM step1
@@ -226,6 +228,9 @@ view: cfms_poc {
           finish_table.service_count,
           welcome_table.office_id,
           office_info.site AS office_name,
+          office_info.officesize AS office_size,
+          office_info.area AS area_number,
+          welcome_table.office_type AS office_type,
           welcome_table.agent_id,
           chooseservice_table.program_id,
           chooseservice_table.program_name,
@@ -291,6 +296,9 @@ view: cfms_poc {
             finalset.service_count,
             finalset.office_id,
             office_name,
+            office_size,
+            area_number,
+            office_type,
             agent_id,
             program_id,
             program_name,
@@ -448,26 +456,46 @@ view: cfms_poc {
 
 
     dimension: waiting_duration_zscore {
+      type:  number
+      sql: ${TABLE}.waiting_duration_zscore ;;
+      group_label: "Z-Scores"
+    }
+    dimension: prep_duration_zscore {
+      type:  number
+      sql: ${TABLE}.prep_duration_zscore ;;
+      group_label: "Z-Scores"
+    }
+    dimension: hold_duration_zscore {
+      type:  number
+      sql: ${TABLE}.hold_duration_zscore ;;
+      group_label: "Z-Scores"
+    }
+    dimension: serve_duration_zscore {
+      type:  number
+      sql: ${TABLE}.serve_duration_zscore ;;
+      group_label: "Z-Scores"
+    }
+
+    dimension: waiting_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.waiting_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
     }
-    dimension: prep_duration_zscore {
+    dimension: prep_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.prep_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
     }
-    dimension: hold_duration_zscore {
+    dimension: hold_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.hold_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
     }
-    dimension: serve_duration_zscore {
+    dimension: serve_duration_outlier {
       type:  yesno
       sql: abs( ${TABLE}.serve_duration_zscore) >= 3;;
       group_label: "Z-Scores"
     }
-
 
     dimension: welcome_time {
       type: date_time
@@ -630,12 +658,29 @@ view: cfms_poc {
     dimension: office_id {
       type: number
       sql: ${TABLE}.office_id ;;
+      group_label: "Office Info"
     }
 
     dimension: office_name {
       type:  string
       sql:  ${TABLE}.office_name ;;
+      group_label: "Office Info"
     }
+   dimension: office_size {
+    type:  string
+    sql:  ${TABLE}.office_size ;;
+    group_label: "Office Info"
+  }
+  dimension: area_number {
+    type:  number
+    sql:  ${TABLE}.area_number ;;
+    group_label: "Office Info"
+  }
+  dimension: office_type {
+    type:  string
+    sql:  ${TABLE}.office_type ;;
+    group_label: "Office Info"
+  }
 
     dimension: agent_id {
       type: number
