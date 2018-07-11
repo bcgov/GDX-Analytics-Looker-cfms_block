@@ -272,19 +272,57 @@ view: cfms_poc {
             SUM(c2.prep_duration) AS prep_duration_sum,
             SUM(c2.hold_duration) AS hold_duration_sum,
             SUM(c2.serve_duration) AS serve_duration_sum,
-            (finalset.waiting_duration - avg(finalset.waiting_duration) over ()) / (stddev(finalset.waiting_duration) over ()) as waiting_duration_zscore,
-            (finalset.prep_duration - avg(finalset.prep_duration) over ()) / (stddev(finalset.prep_duration) over ()) as prep_duration_zscore,
-            (finalset.hold_duration - avg(finalset.hold_duration) over ()) / (stddev(finalset.hold_duration) over ()) as hold_duration_zscore,
-            (finalset.serve_duration - avg(finalset.serve_duration) over ()) / (stddev(finalset.serve_duration) over ()) as serve_duration_zscore,
+            -----------------------------------
+            -- Calculating zscores so we can filter out outliers
+            -- To calculate the zscore, we use the formula (value - mean) / std_dev
+            -- The std_dev and mean are to be calculated for all values for a given office
+            --    (and with the code change below) program_id
+            -- This is done using a Redshift Window Statement. For example, see:
+            --         https://docs.aws.amazon.com/redshift/latest/dg/r_WF_AVG.html
+            --
+            -- We use the CASE statement to avoid dividing by zero. We could move this logic to the LookML below as well
+            ---
+            -- This example shows how to set it for both office_id and program_id.
+            -- For now we just use office_id as we don't have a big enough data set yet
+            --CASE WHEN (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id)) <> 0
+            --    THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id)) / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id))
+            --    ELSE NULL
+            --END AS reception_duration_zscore,
+            -----------------------------------
+            CASE WHEN (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id)) <> 0
+                THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id))
+                ELSE NULL
+            END AS reception_duration_zscore,
+            CASE WHEN (stddev(finalset.waiting_duration) over (PARTITION BY finalset.office_id)) <> 0
+                THEN (finalset.waiting_duration - avg(finalset.waiting_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.waiting_duration) over (PARTITION BY finalset.office_id))
+                ELSE NULL
+            END AS waiting_duration_zscore,
+            CASE WHEN (stddev(finalset.prep_duration) over (PARTITION BY finalset.office_id)) <> 0
+                THEN (finalset.prep_duration - avg(finalset.prep_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.prep_duration) over (PARTITION BY finalset.office_id))
+                ELSE NULL
+            END AS prep_duration_zscore,
+            CASE WHEN (stddev(finalset.hold_duration) over (PARTITION BY finalset.office_id)) <> 0
+                THEN (finalset.hold_duration - avg(finalset.hold_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.hold_duration) over (PARTITION BY finalset.office_id))
+                ELSE NULL
+            END AS hold_duration_zscore,
+            CASE WHEN (stddev(finalset.serve_duration) over (PARTITION BY finalset.office_id)) <> 0
+                THEN (finalset.serve_duration - avg(finalset.serve_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.serve_duration) over (PARTITION BY finalset.office_id))
+                ELSE NULL
+            END AS serve_duration_zscore,
+            -- End zscore calculations
+            ----------------------
             dd.isweekend::BOOLEAN,
             dd.isholiday::BOOLEAN,
             dd.sbcquarter, dd.lastdayofpsapayperiod::date,
-            to_char(welcome_time, 'HH24:00-HH24:59') AS hourly_bucket,
-            CASE WHEN date_part(minute, welcome_time) < 30
-                THEN to_char(welcome_time, 'HH24:00-HH24:29')
-                ELSE to_char(welcome_time, 'HH24:30-HH24:59')
+            -- NOTE: We need to do an explicit timezone conversion here as we are casting ot a CHAR
+            -- in other places the underlying UTC is converterd to Pacific time by Looker. It can't
+            -- do it here as the data it will see below is a string, not a data
+            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:00-HH24:59') AS hourly_bucket,
+            CASE WHEN date_part(minute, CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time)) < 30
+                THEN to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:00-HH24:29')
+                ELSE to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:30-HH24:59')
             END AS half_hour_bucket,
-            to_char(welcome_time, 'HH24:MI:SS') AS date_time_of_day
+            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:MI:SS') AS date_time_of_day
           FROM finalset
           LEFT JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id AND inaccurate_time <> True
           JOIN servicebc.datedimension AS dd on welcome_time::date = dd.datekey::date
@@ -455,6 +493,11 @@ view: cfms_poc {
 
 
 
+    dimension: reception_duration_zscore {
+      type:  number
+      sql: ${TABLE}.reception_duration_zscore ;;
+      group_label: "Z-Scores"
+    }
     dimension: waiting_duration_zscore {
       type:  number
       sql: ${TABLE}.waiting_duration_zscore ;;
@@ -476,6 +519,11 @@ view: cfms_poc {
       group_label: "Z-Scores"
     }
 
+    dimension: reception_duration_outlier {
+      type:  yesno
+      sql: abs(${TABLE}.reception_duration_zscore) >= 3 ;;
+      group_label: "Z-Scores"
+    }
     dimension: waiting_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.waiting_duration_zscore) >= 3 ;;
@@ -666,21 +714,21 @@ view: cfms_poc {
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
     }
-   dimension: office_size {
-    type:  string
-    sql:  ${TABLE}.office_size ;;
-    group_label: "Office Info"
-  }
-  dimension: area_number {
-    type:  number
-    sql:  ${TABLE}.area_number ;;
-    group_label: "Office Info"
-  }
-  dimension: office_type {
-    type:  string
-    sql:  ${TABLE}.office_type ;;
-    group_label: "Office Info"
-  }
+    dimension: office_size {
+      type:  string
+      sql:  ${TABLE}.office_size ;;
+      group_label: "Office Info"
+    }
+    dimension: area_number {
+      type:  number
+      sql:  ${TABLE}.area_number ;;
+      group_label: "Office Info"
+    }
+    dimension: office_type {
+      type:  string
+      sql:  ${TABLE}.office_type ;;
+      group_label: "Office Info"
+    }
 
     dimension: agent_id {
       type: number
