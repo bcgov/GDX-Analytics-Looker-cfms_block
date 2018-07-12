@@ -12,12 +12,13 @@ include: "*.view"
 # include: "*.dashboard"
 
 explore: cfms_poc {}
-#explore: cfms_poc {
-#  access_filter: {
-#    field: office_name
-#    user_attribute: location
-#  }
-#}
+
+explore: cfms_dev {
+  access_filter: {
+    field: office_name
+    user_attribute: location
+  }
+}
 
 explore: cats {}
 
