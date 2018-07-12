@@ -13,6 +13,8 @@ include: "*.view"
 
 explore: cfms_poc {}
 
+
+# See: https://docs.looker.com/reference/explore-params/access_filter
 explore: cfms_dev {
   access_filter: {
     field: office_name
