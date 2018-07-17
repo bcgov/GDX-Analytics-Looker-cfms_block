@@ -182,17 +182,19 @@ view: cfms_poc {
           finish_time as t5,
           welcome_table.client_id,
           finish_table.service_count,
-          CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL) THEN DATEDIFF(seconds, welcome_time, stand_time)
+          CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, welcome_time, stand_time)
               ELSE NULL
               END AS reception_duration,
-          CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL) THEN DATEDIFF(seconds, stand_time, invite_time)
+          CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, stand_time, invite_time)
               ELSE NULL
               END AS waiting_duration,
-          CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, invite_time, start_time)
+          CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
               END AS prep_duration,
-          COALESCE(hold_duration,0) AS hold_duration,
-          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, start_time, finish_time) - COALESCE(hold_duration,0)
+          CASE WHEN (inaccurate_time <> True) THEN COALESCE(hold_duration,0)
+              ELSE NULL
+              END AS hold_duration,
+          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, start_time, finish_time) - COALESCE(hold_duration,0)
               ELSE NULL
               END AS serve_duration
 
@@ -253,6 +255,7 @@ view: cfms_poc {
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
           LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
+          WHERE invite_time IS NOT NULL
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
@@ -707,22 +710,26 @@ view: cfms_poc {
       type: number
       sql: ${TABLE}.office_id ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
 
     dimension: office_name {
       type:  string
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: office_size {
       type:  string
       sql:  ${TABLE}.office_size ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: area_number {
       type:  number
       sql:  ${TABLE}.area_number ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: office_type {
       type:  string
@@ -744,20 +751,26 @@ view: cfms_poc {
     dimension: program_name {
       type: string
       sql: ${TABLE}.program_name ;;
+      drill_fields: [program_name,transaction_name]
     }
 
     dimension: transaction_name {
       type: string
       sql: ${TABLE}.transaction_name ;;
+      drill_fields: [transaction_name]
     }
 
     dimension: channel {
       type: string
       sql: ${TABLE}.channel ;;
+      drill_fields: [channel]
     }
 
     dimension: inaccurate_time {
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
     }
+
+
+
   }
