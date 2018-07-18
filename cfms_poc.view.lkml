@@ -255,7 +255,6 @@ view: cfms_poc {
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
           LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
           JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
-          WHERE invite_time IS NOT NULL
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
