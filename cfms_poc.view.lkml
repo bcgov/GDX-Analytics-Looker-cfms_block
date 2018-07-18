@@ -359,8 +359,9 @@ view: cfms_poc {
           ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
-      persist_for: "1 hour"
+      #persist_for: "1 hour"
       distribution_style: all
+      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker = 'CFMS_poc';;
     }
 
 # Build measures and dimensions
