@@ -713,6 +713,7 @@ view: cfms_dev {
       type:  string
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: office_size {
       type:  string
@@ -744,6 +745,7 @@ view: cfms_dev {
     dimension: program_name {
       type: string
       sql: ${TABLE}.program_name ;;
+      drill_fields: [program_name,transaction_name]
     }
 
     dimension: transaction_name {
