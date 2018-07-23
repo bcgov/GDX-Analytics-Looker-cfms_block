@@ -51,6 +51,7 @@ view: cfms_all_events {
     dimension: client_id {
       type: number
       sql: ${TABLE}.client_id ;;
+      html: {{ rendered_value }} ;;
     }
 
     dimension: service_count {

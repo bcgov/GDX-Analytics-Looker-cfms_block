@@ -194,7 +194,10 @@ view: cfms_poc {
           CASE WHEN (inaccurate_time <> True) THEN COALESCE(hold_duration,0)
               ELSE NULL
               END AS hold_duration,
-          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, start_time, finish_time) - COALESCE(hold_duration,0)
+          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL)
+                 THEN DATEDIFF(seconds, start_time, finish_time) - hold_duration
+              WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL)
+                 THEN DATEDIFF(seconds, start_time, finish_time)
               ELSE NULL
               END AS serve_duration
 
