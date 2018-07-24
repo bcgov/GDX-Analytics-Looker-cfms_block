@@ -476,6 +476,13 @@ view: cfms_poc {
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
+
+    measure: serve_duration_per_issue_sum_raw {
+      type: sum
+      sql:  ${TABLE}.serve_duration ;;
+      group_label: "Durations"
+    }
+
     measure: serve_duration_per_issue_average {
       type:  average
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
@@ -565,7 +572,8 @@ view: cfms_poc {
     dimension: p_key {
       primary_key: yes
       hidden: yes
-      sql: ${client_id} || ${program_id} || ${service_count} ;;
+      sql: ${client_id} ;;
+      #sql: ${client_id} || ${program_id} || ${service_count} ;;
     }
 
 
