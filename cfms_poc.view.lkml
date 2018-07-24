@@ -397,7 +397,7 @@ view: cfms_poc {
     #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
     measure: waiting_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -405,7 +405,7 @@ view: cfms_poc {
     measure: waiting_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -430,7 +430,7 @@ view: cfms_poc {
     }
     measure: prep_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -438,7 +438,7 @@ view: cfms_poc {
     measure: prep_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -457,7 +457,7 @@ view: cfms_poc {
     }
     measure: hold_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -465,7 +465,7 @@ view: cfms_poc {
     measure: hold_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -484,7 +484,7 @@ view: cfms_poc {
     }
     measure: serve_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -492,7 +492,7 @@ view: cfms_poc {
     measure: serve_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -560,6 +560,12 @@ view: cfms_poc {
     measure: count_of_days {
       type: number
       sql: count(distinct date(${TABLE}.welcome_time));;
+    }
+
+    dimension: p_key {
+      primary_key: yes
+      hidden: yes
+      sql: ${client_id} || ${program_id} || ${service_count} ;;
     }
 
 
