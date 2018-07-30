@@ -5,35 +5,8 @@ view: cfms_poc {
                         -- build the individual tables from this big one below
                         -- NOTE: we are ignoring instances where there is no client_id
           SELECT
-            event_name,
-            -- CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS
-            derived_tstamp AS event_time,
-            client_id,
-            service_count,
-            office_id,
-            office_type,
-            agent_id,
-            channel,
-            program_id,
-            parent_id,
-            program_name,
-            transaction_name,
-            count,
-            inaccurate_time
-          FROM atomic.events AS ev
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
-              ON ev.event_id = a.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
-              ON ev.event_id = c.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
-              ON ev.event_id = o.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_2 AS cs
-              ON ev.event_id = cs.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
-              ON ev.event_id = fi.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
-              ON ev.event_id = ho.root_id
-          WHERE name_tracker = 'CFMS_poc' AND client_id IS NOT NULL
+            *
+            FROM derived.cfms_step1
           ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
@@ -182,28 +155,44 @@ view: cfms_poc {
           finish_time as t5,
           welcome_table.client_id,
           finish_table.service_count,
-          CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, welcome_time, stand_time)
+          CASE WHEN (welcome_time IS NOT NULL AND stand_time IS NOT NULL AND inaccurate_time <> True
+          AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+          ) THEN DATEDIFF(seconds, welcome_time, stand_time)
               ELSE NULL
               END AS reception_duration,
-          CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, stand_time, invite_time)
+          CASE WHEN (stand_time IS NOT NULL AND invite_time IS NOT NULL AND inaccurate_time <> True
+AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+) THEN DATEDIFF(seconds, stand_time, invite_time)
               ELSE NULL
               END AS waiting_duration,
-          CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, invite_time, start_time)
+          CASE WHEN (invite_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True
+AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
               END AS prep_duration,
-          CASE WHEN (inaccurate_time <> True) THEN COALESCE(hold_duration,0)
+          CASE WHEN (inaccurate_time <> True
+AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+) THEN COALESCE(hold_duration,0)
               ELSE NULL
               END AS hold_duration,
-          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL)
+          CASE WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL
+AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+)
                  THEN DATEDIFF(seconds, start_time, finish_time) - hold_duration
-              WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL)
+              WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL
+AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
+)
                  THEN DATEDIFF(seconds, start_time, finish_time)
               ELSE NULL
-              END AS serve_duration
+              END AS serve_duration,
+          CASE WHEN  ( (holdparity IS NOT NULL AND holdparity <> 0)
+            OR invite_time IS NULL
+            OR start_time IS NULL
+            OR finish_time IS NULL) THEN True ELSE False END AS missing_calls
 
           FROM welcome_table
-          LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
           LEFT JOIN finish_table ON welcome_table.client_id = finish_table.client_id
+          LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id AND finish_table.service_count = stand_table.service_count
           LEFT JOIN invite_table ON welcome_table.client_id = invite_table.client_id AND finish_table.service_count = invite_table.service_count
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
           LEFT JOIN hold_calculations ON finish_table.client_id = hold_calculations.client_id AND finish_table.service_count = hold_calculations.service_count
@@ -242,22 +231,23 @@ view: cfms_poc {
           transaction_name,
           chooseservice_table.channel,
           finish_table.inaccurate_time,
+          c1.missing_calls,
           welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
-          c1.reception_duration,
-          c1.waiting_duration,
-          c1.prep_duration,
-          c1.hold_duration,
-          c1.serve_duration
+          c1.reception_duration AS reception_duration,
+          c1.waiting_duration AS waiting_duration,
+          c1.prep_duration AS prep_duration,
+          c1.hold_duration AS hold_duration,
+          c1.serve_duration AS serve_duration
           FROM welcome_table
-          LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id
           LEFT JOIN finish_table ON welcome_table.client_id = finish_table.client_id
+          LEFT JOIN stand_table ON welcome_table.client_id = stand_table.client_id AND finish_table.service_count = stand_table.service_count
           LEFT JOIN invite_table ON welcome_table.client_id = invite_table.client_id AND finish_table.service_count = invite_table.service_count
           LEFT JOIN start_table ON welcome_table.client_id = start_table.client_id AND finish_table.service_count = start_table.service_count
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
           LEFT JOIN hold_table ON welcome_table.client_id = hold_table.client_id AND finish_table.service_count = hold_table.service_count
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
           LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
-          JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
+          LEFT JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
@@ -329,7 +319,7 @@ view: cfms_poc {
             END AS half_hour_bucket,
             to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:MI:SS') AS date_time_of_day
           FROM finalset
-          LEFT JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id AND inaccurate_time <> True
+          LEFT JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
           JOIN servicebc.datedimension AS dd on welcome_time::date = dd.datekey::date
           WHERE finalset.client_id_ranked = 1
             AND program_name IS NOT NULL
@@ -348,6 +338,7 @@ view: cfms_poc {
             transaction_name,
             channel,
             inaccurate_time,
+            finalset.missing_calls,
             welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
             finalset.reception_duration,
             finalset.waiting_duration,
@@ -373,6 +364,12 @@ view: cfms_poc {
       #  drill_fields: [detail*]
     }
 
+    measure: reception_duration_sum {
+      type:  sum
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
     measure: reception_duration_average {
       type:  average
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
@@ -397,25 +394,19 @@ view: cfms_poc {
     #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
     measure: waiting_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${p_key};;
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     measure: waiting_duration_average {
       type: average_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
 
-    #dimension: prep_duration {
-    #  type:  number
-    #  sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
-    #  value_format: "[h]:mm:ss"
-    #  group_label: "Durations"
-    #}
     measure: prep_duration_per_issue_sum {
       type: sum
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
@@ -430,42 +421,44 @@ view: cfms_poc {
     }
     measure: prep_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${p_key};;
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     measure: prep_duration_average {
       type: average_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
 
     measure: hold_duration_per_issue_sum {
-      type: sum
+      type: sum_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     measure: hold_duration_per_issue_average {
-      type:  average
+      type:  average_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     measure: hold_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${p_key};;
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     measure: hold_duration_average {
       type: average_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -491,15 +484,21 @@ view: cfms_poc {
     }
     measure: serve_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${p_key};;
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
+    measure: serve_duration_sum_raw {
+      type: sum_distinct
+      sql_distinct_key: ${client_id} ;;
+      sql: ${TABLE}.serve_duration_sum;;
+      group_label: "Durations"
+    }
     measure: serve_duration_average {
       type: average_distinct
+      sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -788,6 +787,9 @@ view: cfms_poc {
       sql: ${TABLE}.inaccurate_time ;;
     }
 
-
+    dimension: missing_calls {
+      type: yesno
+      sql: ${TABLE}.missing_calls ;;
+    }
 
   }

@@ -182,17 +182,22 @@ view: cfms_dev {
           finish_time as t5,
           welcome_table.client_id,
           finish_table.service_count,
-          CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL) THEN DATEDIFF(seconds, welcome_time, stand_time)
+          CASE WHEN (welcome_time IS NOT NULL and stand_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, welcome_time, stand_time)
               ELSE NULL
               END AS reception_duration,
-          CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL) THEN DATEDIFF(seconds, stand_time, invite_time)
+          CASE WHEN (stand_time IS NOT NULL and invite_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, stand_time, invite_time)
               ELSE NULL
               END AS waiting_duration,
-          CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, invite_time, start_time)
+          CASE WHEN (invite_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True) THEN DATEDIFF(seconds, invite_time, start_time)
               ELSE NULL
               END AS prep_duration,
-          COALESCE(hold_duration,0) AS hold_duration,
-          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL) THEN DATEDIFF(seconds, start_time, finish_time) - COALESCE(hold_duration,0)
+          CASE WHEN (inaccurate_time <> True) THEN COALESCE(hold_duration,0)
+              ELSE NULL
+              END AS hold_duration,
+          CASE WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL)
+                 THEN DATEDIFF(seconds, start_time, finish_time) - hold_duration
+              WHEN (finish_time IS NOT NULL and start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL)
+                 THEN DATEDIFF(seconds, start_time, finish_time)
               ELSE NULL
               END AS serve_duration
 
@@ -356,8 +361,9 @@ view: cfms_dev {
           ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
-      persist_for: "1 hour"
+      #persist_for: "1 hour"
       distribution_style: all
+      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker = 'CFMS_poc';;
     }
 
 # Build measures and dimensions
@@ -391,7 +397,7 @@ view: cfms_dev {
     #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
     measure: waiting_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -399,7 +405,7 @@ view: cfms_dev {
     measure: waiting_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -424,7 +430,7 @@ view: cfms_dev {
     }
     measure: prep_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -432,7 +438,7 @@ view: cfms_dev {
     measure: prep_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -451,7 +457,7 @@ view: cfms_dev {
     }
     measure: hold_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -459,7 +465,7 @@ view: cfms_dev {
     measure: hold_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -470,6 +476,13 @@ view: cfms_dev {
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
+
+    measure: serve_duration_per_issue_sum_raw {
+      type: sum
+      sql:  ${TABLE}.serve_duration ;;
+      group_label: "Durations"
+    }
+
     measure: serve_duration_per_issue_average {
       type:  average
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
@@ -478,7 +491,7 @@ view: cfms_dev {
     }
     measure: serve_duration_sum {
       type: sum_distinct
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
@@ -486,7 +499,7 @@ view: cfms_dev {
     measure: serve_duration_average {
       type: average_distinct
       sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
-      sql_distinct_key: ${TABLE}.client_id;;
+      sql_distinct_key: ${p_key};;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
@@ -554,6 +567,13 @@ view: cfms_dev {
     measure: count_of_days {
       type: number
       sql: count(distinct date(${TABLE}.welcome_time));;
+    }
+
+    dimension: p_key {
+      primary_key: yes
+      hidden: yes
+      sql: ${client_id} ;;
+      #sql: ${client_id} || ${program_id} || ${service_count} ;;
     }
 
 
@@ -707,6 +727,7 @@ view: cfms_dev {
       type: number
       sql: ${TABLE}.office_id ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
 
     dimension: office_name {
@@ -719,11 +740,13 @@ view: cfms_dev {
       type:  string
       sql:  ${TABLE}.office_size ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: area_number {
       type:  number
       sql:  ${TABLE}.area_number ;;
       group_label: "Office Info"
+      drill_fields: [office_name]
     }
     dimension: office_type {
       type:  string
@@ -751,11 +774,13 @@ view: cfms_dev {
     dimension: transaction_name {
       type: string
       sql: ${TABLE}.transaction_name ;;
+      drill_fields: [transaction_name]
     }
 
     dimension: channel {
       type: string
       sql: ${TABLE}.channel ;;
+      drill_fields: [channel]
     }
 
     dimension: inaccurate_time {
