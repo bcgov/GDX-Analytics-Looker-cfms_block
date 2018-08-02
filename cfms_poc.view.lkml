@@ -4,6 +4,9 @@ view: cfms_poc {
                         -- this will include all fields for all possible events. We will then
                         -- build the individual tables from this big one below
                         -- NOTE: we are ignoring instances where there is no client_id
+                        --
+                        -- See here for info on incrementally building 'derived.cfms_step1'
+                        -- https://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
           SELECT
             *
             FROM derived.cfms_step1
@@ -104,7 +107,7 @@ view: cfms_poc {
             service_count,
             office_id,
             agent_id,
-            count,
+            count AS transactions_count,
             inaccurate_time,
             event_time finish_time
           FROM step1
@@ -155,6 +158,7 @@ view: cfms_poc {
           finish_time as t5,
           welcome_table.client_id,
           finish_table.service_count,
+          finish_table.transactions_count,
           CASE WHEN (welcome_time IS NOT NULL AND stand_time IS NOT NULL AND inaccurate_time <> True
           AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
           ) THEN DATEDIFF(seconds, welcome_time, stand_time)
@@ -232,6 +236,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           chooseservice_table.channel,
           finish_table.inaccurate_time,
           c1.missing_calls,
+          finish_table.transactions_count,
           welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
           c1.reception_duration AS reception_duration,
           c1.waiting_duration AS waiting_duration,
@@ -263,10 +268,16 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
                             -- this is because the reception_duration only happens once per client
                             -- waiting_duration and prep_duration can be per client or per service. This gives us the per client version
                             -- below we use "sum_distinct" and "average_distinct" to report out on these versions
-            SUM(c2.waiting_duration) AS waiting_duration_sum,
-            SUM(c2.prep_duration) AS prep_duration_sum,
-            SUM(c2.hold_duration) AS hold_duration_sum,
-            SUM(c2.serve_duration) AS serve_duration_sum,
+            SUM(c2.waiting_duration) AS waiting_duration_total,
+            SUM(c2.prep_duration) AS prep_duration_total,
+            SUM(c2.hold_duration) AS hold_duration_total,
+            SUM(c2.serve_duration) AS serve_duration_total,
+                        -----------------------------------
+            -- Add a flag for back office transactions
+            CASE WHEN program_name = 'back-office' OR channel <> 'in-person'
+              THEN 'Back Office'
+              ELSE 'Front Office'
+              END as back_office,
             -----------------------------------
             -- Calculating zscores so we can filter out outliers
             -- To calculate the zscore, we use the formula (value - mean) / std_dev
@@ -338,6 +349,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             transaction_name,
             channel,
             inaccurate_time,
+            finalset.transactions_count,
             finalset.missing_calls,
             welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
             finalset.reception_duration,
@@ -358,152 +370,165 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     }
 
 # Build measures and dimensions
-
-    measure: count {
+    measure: visits_count {
+      type: number
+      sql: COUNT (DISTINCT ${client_id} ) ;;
+      group_label: "Counts"
+    }
+    measure: services_count {
       type: count
-      #  drill_fields: [detail*]
+      group_label: "Counts"
+    }
+    measure: transactions_count {
+      type: sum
+      sql:  ${TABLE}.transactions_count ;;
+      group_label: "Counts"
+    }
+    dimension: back_office {
+      type:  string
+      sql:  ${TABLE}.back_office ;;
     }
 
-    measure: reception_duration_sum {
+    # Time based measures
+
+    measure: reception_duration_per_visit_total {
       type:  sum
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Reception Duration"
     }
-    measure: reception_duration_average {
+    measure: reception_duration_per_visit_average {
       type:  average
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Reception Duration"
     }
 
-    measure: waiting_duration_per_issue_sum {
+    measure: waiting_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Waiting Duration"
     }
-    measure: waiting_duration_per_issue_average {
+    measure: waiting_duration_per_service_average {
       type:  average
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Waiting Duration"
     }
 
     # See here to understand the use of sum_distinct and average_distinct:
     #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
-    measure: waiting_duration_sum {
+    measure: waiting_duration_per_visit_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Waiting Duration"
     }
-    measure: waiting_duration_average {
+    measure: waiting_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.waiting_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Waiting Duration"
     }
 
-    measure: prep_duration_per_issue_sum {
+    measure: prep_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Prep Duration"
     }
-    measure: prep_duration_per_issue_average {
+    measure: prep_duration_per_service_average {
       type:  average
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Prep Duration"
     }
-    measure: prep_duration_sum {
+    measure: prep_duration_per_visit_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Prep Duration"
     }
-    measure: prep_duration_average {
+    measure: prep_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.prep_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Prep Duration"
     }
 
-    measure: hold_duration_per_issue_sum {
+    measure: hold_duration_per_service_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Hold Duration"
     }
-    measure: hold_duration_per_issue_average {
+    measure: hold_duration_per_service_average {
       type:  average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Hold Duration"
     }
-    measure: hold_duration_sum {
+    measure: hold_duration_per_visit_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Hold Duration"
     }
-    measure: hold_duration_average {
+    measure: hold_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.hold_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Hold Duration"
     }
 
-    measure: serve_duration_per_issue_sum {
+    measure: serve_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Serve Duration"
     }
 
-    measure: serve_duration_per_issue_sum_raw {
-      type: sum
-      sql:  ${TABLE}.serve_duration ;;
-      group_label: "Durations"
-    }
+    #measure: serve_duration_per_service_total_raw {
+    #  type: sum
+    #  sql:  ${TABLE}.serve_duration ;;
+    #  group_label: "Durations"
+    #}
 
-    measure: serve_duration_per_issue_average {
+    measure: serve_duration_per_service_average {
       type:  average
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Serve Duration"
     }
-    measure: serve_duration_sum {
+    measure: serve_duration_per_visit_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Serve Duration"
     }
-    measure: serve_duration_sum_raw {
-      type: sum_distinct
-      sql_distinct_key: ${client_id} ;;
-      sql: ${TABLE}.serve_duration_sum;;
-      group_label: "Durations"
-    }
-    measure: serve_duration_average {
+    #measure: serve_duration_total_raw {
+    #  type: sum_distinct
+    #  sql_distinct_key: ${client_id} ;;
+    #  sql: ${TABLE}.serve_duration_total;;
+    #  group_label: "Durations"
+    #}
+    measure: serve_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.serve_duration_sum)/(60*60*24) ;;
+      sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
-      group_label: "Durations"
+      group_label: "Serve Duration"
     }
-
-
 
     dimension: reception_duration_zscore {
       type:  number
