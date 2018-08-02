@@ -184,6 +184,9 @@ view: cats {
     sql:  ${TABLE}.lastdayofpsapayperiod ;;
     group_label: "Date"
   }
+measure: count  {
+  type:  count
+}
 
 
 }
