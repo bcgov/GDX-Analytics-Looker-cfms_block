@@ -18,8 +18,8 @@ view: cats {
           source_host_name,
           sbc.source_host_name AS asset_tag,
           flex_string,
-          dd.isweekend,
-          dd.isholiday,
+          dd.isweekend::BOOLEAN,
+          dd.isholiday::BOOLEAN,
           dd.sbcquarter, dd.lastdayofpsapayperiod::date,
           to_char(govdate, 'HH24:00-HH24:59') AS hourly_bucket,
           CASE WHEN date_part(minute, govdate) < 30
