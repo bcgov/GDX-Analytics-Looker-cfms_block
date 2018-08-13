@@ -38,7 +38,8 @@ view: cats {
           LEFT JOIN cmslite.metadata AS cms ON cms.hr_url = 'https://www2.gov.bc.ca' || SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
           ;;
     # https://docs.looker.com/data-modeling/learning-lookml/caching
-      persist_for: "4 hours"
+    # This should cause the table to rebuild every day at 7am. May need to confirm timezones.
+      sql_trigger_value: SELECT FLOOR((EXTRACT(epoch from GETDATE()) - 60*60*7)/(60*60*24)) ;;
       distribution_style: all
     }
 
