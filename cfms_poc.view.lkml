@@ -277,7 +277,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             SUM(c2.serve_duration) AS serve_duration_total,
             -----------------------------------
             -- Add a flag for back office transactions
-            CASE WHEN program_name = 'Back Office' -- OR channel <> 'in-person'
+            CASE WHEN program_name = 'Back Office'
               THEN 'Back Office'
               ELSE 'Front Office'
               END as back_office,
