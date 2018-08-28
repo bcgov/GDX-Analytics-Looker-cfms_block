@@ -135,7 +135,8 @@ view: cfms_poc {
           WHERE event_name in ('chooseservice')
           ORDER BY event_time DESC
           ),
-        hold_calculations AS ( --  build hold calculations. For a given client_id+service_count we use  Sum of all (invitefromhold – hold) = sum (invitefromhold) - sum(hold)
+        hold_calculations AS ( --  build hold calculations. For a given client_id+service_count we use
+              -- Sum of all (invitefromhold – hold) = sum (invitefromhold) - sum(hold)
           SELECT
             client_id,
             service_count,
@@ -214,7 +215,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
                       -- NOTE: the ordering is chosen insite the PARTITION statement where we have a "t3 DESC".
           SELECT ranked.*
           FROM (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4 DESC, t5) AS client_id_ranked -- we want the LAST invite_time = invite time
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY t1, t2, t3 DESC, t4 DESC, t5) AS client_id_ranked
+            -- we want the LAST invite_time = invite time
             FROM calculations
             ORDER BY client_id, service_count, t1, t2, t3 DESC, t4 DESC, t5
           ) AS ranked
@@ -257,7 +259,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
             SELECT ranked.*
             FROM (
-              SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count ORDER BY welcome_time, stand_time, invite_time DESC, start_time DESC, finish_time) AS client_id_ranked
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY client_id, service_count
+                  ORDER BY welcome_time, stand_time, invite_time DESC, start_time DESC, finish_time) AS client_id_ranked
                                             -- NOTE: the sort ordering here must match the order in finalcalc above
               FROM combined
               ORDER BY welcome_time, client_id, service_count
@@ -272,9 +275,9 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             SUM(c2.prep_duration) AS prep_duration_total,
             SUM(c2.hold_duration) AS hold_duration_total,
             SUM(c2.serve_duration) AS serve_duration_total,
-                        -----------------------------------
+            -----------------------------------
             -- Add a flag for back office transactions
-            CASE WHEN program_name = 'back-office' OR channel <> 'in-person'
+            CASE WHEN program_name = 'back-office' -- OR channel <> 'in-person'
               THEN 'Back Office'
               ELSE 'Front Office'
               END as back_office,
@@ -291,28 +294,34 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             -- This example shows how to set it for both office_id and program_id.
             -- For now we just use office_id as we don't have a big enough data set yet
             --CASE WHEN (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id)) <> 0
-            --    THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id)) / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id))
+            --    THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id))
+            --              / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id, finalset.program_id))
             --    ELSE NULL
             --END AS reception_duration_zscore,
             -----------------------------------
             CASE WHEN (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id)) <> 0
-                THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id))
+                THEN (finalset.reception_duration - avg(finalset.reception_duration) over (PARTITION BY finalset.office_id))
+                   / (stddev(finalset.reception_duration) over (PARTITION BY finalset.office_id))
                 ELSE NULL
             END AS reception_duration_zscore,
             CASE WHEN (stddev(finalset.waiting_duration) over (PARTITION BY finalset.office_id)) <> 0
-                THEN (finalset.waiting_duration - avg(finalset.waiting_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.waiting_duration) over (PARTITION BY finalset.office_id))
+                THEN (finalset.waiting_duration - avg(finalset.waiting_duration) over (PARTITION BY finalset.office_id))
+                   / (stddev(finalset.waiting_duration) over (PARTITION BY finalset.office_id))
                 ELSE NULL
             END AS waiting_duration_zscore,
             CASE WHEN (stddev(finalset.prep_duration) over (PARTITION BY finalset.office_id)) <> 0
-                THEN (finalset.prep_duration - avg(finalset.prep_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.prep_duration) over (PARTITION BY finalset.office_id))
+                THEN (finalset.prep_duration - avg(finalset.prep_duration) over (PARTITION BY finalset.office_id))
+                   / (stddev(finalset.prep_duration) over (PARTITION BY finalset.office_id))
                 ELSE NULL
             END AS prep_duration_zscore,
             CASE WHEN (stddev(finalset.hold_duration) over (PARTITION BY finalset.office_id)) <> 0
-                THEN (finalset.hold_duration - avg(finalset.hold_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.hold_duration) over (PARTITION BY finalset.office_id))
+                THEN (finalset.hold_duration - avg(finalset.hold_duration) over (PARTITION BY finalset.office_id))
+                   / (stddev(finalset.hold_duration) over (PARTITION BY finalset.office_id))
                 ELSE NULL
             END AS hold_duration_zscore,
             CASE WHEN (stddev(finalset.serve_duration) over (PARTITION BY finalset.office_id)) <> 0
-                THEN (finalset.serve_duration - avg(finalset.serve_duration) over (PARTITION BY finalset.office_id)) / (stddev(finalset.serve_duration) over (PARTITION BY finalset.office_id))
+                THEN (finalset.serve_duration - avg(finalset.serve_duration) over (PARTITION BY finalset.office_id))
+                   / (stddev(finalset.serve_duration) over (PARTITION BY finalset.office_id))
                 ELSE NULL
             END AS serve_duration_zscore,
             -- End zscore calculations
@@ -530,6 +539,175 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Serve Duration"
     }
 
+
+    # Time based dimentions
+    dimension: reception_duration_per_visit {
+      type:  number
+
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: waiting_duration_per_service {
+      type:  number
+      sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: waiting_duration_per_visit {
+      type:  number
+      sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: prep_duration_per_service {
+      type:  number
+      sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: prep_duration_per_visit {
+      type:  number
+      sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: hold_duration_per_service {
+      type:  number
+      sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+    dimension: hold_duration_per_visit {
+      type:  number
+      sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: serve_duration_per_service {
+      type:  number
+      sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+    dimension: serve_duration_per_visit {
+      type:  number
+      sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Durations"
+    }
+
+  # buckets
+  # Serve Duration by Service
+  dimension: serve_duration_bucket {
+    type:  string
+    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
+              WHEN ${TABLE}.serve_duration < 1200 THEN '5-20'
+              WHEN ${TABLE}.serve_duration < 3600 THEN '20-60'
+              WHEN ${TABLE}.serve_duration >= 3600 THEN '60+'
+              ELSE NULL
+              END;;
+    group_label: "Durations"
+
+  }
+  measure: serve_duration_bucket_0_5 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 0-5"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_5_20 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 300 AND ${TABLE}.serve_duration < 1200 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 5-20"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_20_60 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 1200 AND ${TABLE}.serve_duration < 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 20-60"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_60_plus {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 60+"
+    group_label: "Duration Buckets"
+
+  }
+
+
+  # Waiting Duration by Visit
+  dimension: waiting_duration_bucket {
+    type:  string
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN '0-5'
+              WHEN ${TABLE}.waiting_duration_total < 1200 THEN '5-20'
+              WHEN ${TABLE}.waiting_duration_total < 3600 THEN '20-60'
+              WHEN ${TABLE}.waiting_duration_total >= 3600 THEN '60+'
+              ELSE NULL
+              END;;
+    group_label: "Durations"
+
+  }
+  measure: waiting_duration_bucket_0_5 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 0-5"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_5_20 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 300 AND ${TABLE}.waiting_duration_total < 1200 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 5-20"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_20_60 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 1200 AND ${TABLE}.waiting_duration_total < 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 20-60"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_60_plus {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 60+"
+    group_label: "Duration Buckets"
+
+  }
+
+
+
+    # Outlier dimensions
+
     dimension: reception_duration_zscore {
       type:  number
       sql: ${TABLE}.reception_duration_zscore ;;
@@ -736,6 +914,9 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.invitefromhold_time ;;
       group_label: "Timing Points"
     }
+
+
+
 
     dimension: client_id {
       type: number
