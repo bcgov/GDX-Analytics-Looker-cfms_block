@@ -275,7 +275,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             SUM(c2.prep_duration) AS prep_duration_total,
             SUM(c2.hold_duration) AS hold_duration_total,
             SUM(c2.serve_duration) AS serve_duration_total,
-                        -----------------------------------
+            -----------------------------------
             -- Add a flag for back office transactions
             CASE WHEN program_name = 'back-office' -- OR channel <> 'in-person'
               THEN 'Back Office'
@@ -603,6 +603,106 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
+
+  # buckets
+  # Serve Duration by Service
+  dimension: serve_duration_bucket {
+    type:  string
+    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
+              WHEN ${TABLE}.serve_duration < 1200 THEN '5-20'
+              WHEN ${TABLE}.serve_duration < 3600 THEN '20-60'
+              WHEN ${TABLE}.serve_duration >= 3600 THEN '60+'
+              ELSE NULL
+              END;;
+    group_label: "Durations"
+
+  }
+  measure: serve_duration_bucket_0_5 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 0-5"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_5_20 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 300 AND ${TABLE}.serve_duration < 1200 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 5-20"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_20_60 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 1200 AND ${TABLE}.serve_duration < 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 20-60"
+    group_label: "Duration Buckets"
+
+  }
+  measure: serve_duration_bucket_60_plus {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.serve_duration >= 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Serve Duration: 60+"
+    group_label: "Duration Buckets"
+
+  }
+
+
+  # Waiting Duration by Visit
+  dimension: waiting_duration_bucket {
+    type:  string
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN '0-5'
+              WHEN ${TABLE}.waiting_duration_total < 1200 THEN '5-20'
+              WHEN ${TABLE}.waiting_duration_total < 3600 THEN '20-60'
+              WHEN ${TABLE}.waiting_duration_total >= 3600 THEN '60+'
+              ELSE NULL
+              END;;
+    group_label: "Durations"
+
+  }
+  measure: waiting_duration_bucket_0_5 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 0-5"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_5_20 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 300 AND ${TABLE}.waiting_duration_total < 1200 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 5-20"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_20_60 {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 1200 AND ${TABLE}.waiting_duration_total < 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 20-60"
+    group_label: "Duration Buckets"
+
+  }
+  measure: waiting_duration_bucket_60_plus {
+    type:  sum
+    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 3600 THEN 1
+              ELSE 0
+              END;;
+    label: "Waiting Duration: 60+"
+    group_label: "Duration Buckets"
+
+  }
 
 
 
