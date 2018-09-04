@@ -604,105 +604,105 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Durations"
     }
 
-  # buckets
-  # Serve Duration by Service
-  dimension: serve_duration_bucket {
-    type:  string
-    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
+    # buckets
+    # Serve Duration by Service
+    dimension: serve_duration_bucket {
+      type:  string
+      sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
               WHEN ${TABLE}.serve_duration < 1200 THEN '5-20'
               WHEN ${TABLE}.serve_duration < 3600 THEN '20-60'
               WHEN ${TABLE}.serve_duration >= 3600 THEN '60+'
               ELSE NULL
               END;;
-    group_label: "Durations"
+      group_label: "Durations"
 
-  }
-  measure: serve_duration_bucket_0_5 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
+    }
+    measure: serve_duration_bucket_0_5 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
               ELSE 0
               END;;
-    label: "Serve Duration: 0-5"
-    group_label: "Duration Buckets"
+      label: "Serve Duration: 0-5"
+      group_label: "Duration Buckets"
 
-  }
-  measure: serve_duration_bucket_5_20 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.serve_duration >= 300 AND ${TABLE}.serve_duration < 1200 THEN 1
+    }
+    measure: serve_duration_bucket_5_20 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.serve_duration >= 300 AND ${TABLE}.serve_duration < 1200 THEN 1
               ELSE 0
               END;;
-    label: "Serve Duration: 5-20"
-    group_label: "Duration Buckets"
+      label: "Serve Duration: 5-20"
+      group_label: "Duration Buckets"
 
-  }
-  measure: serve_duration_bucket_20_60 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.serve_duration >= 1200 AND ${TABLE}.serve_duration < 3600 THEN 1
+    }
+    measure: serve_duration_bucket_20_60 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.serve_duration >= 1200 AND ${TABLE}.serve_duration < 3600 THEN 1
               ELSE 0
               END;;
-    label: "Serve Duration: 20-60"
-    group_label: "Duration Buckets"
+      label: "Serve Duration: 20-60"
+      group_label: "Duration Buckets"
 
-  }
-  measure: serve_duration_bucket_60_plus {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.serve_duration >= 3600 THEN 1
+    }
+    measure: serve_duration_bucket_60_plus {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.serve_duration >= 3600 THEN 1
               ELSE 0
               END;;
-    label: "Serve Duration: 60+"
-    group_label: "Duration Buckets"
+      label: "Serve Duration: 60+"
+      group_label: "Duration Buckets"
 
-  }
+    }
 
 
-  # Waiting Duration by Visit
-  dimension: waiting_duration_bucket {
-    type:  string
-    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN '0-5'
+    # Waiting Duration by Visit
+    dimension: waiting_duration_bucket {
+      type:  string
+      sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN '0-5'
               WHEN ${TABLE}.waiting_duration_total < 1200 THEN '5-20'
               WHEN ${TABLE}.waiting_duration_total < 3600 THEN '20-60'
               WHEN ${TABLE}.waiting_duration_total >= 3600 THEN '60+'
               ELSE NULL
               END;;
-    group_label: "Durations"
+      group_label: "Durations"
 
-  }
-  measure: waiting_duration_bucket_0_5 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN 1
+    }
+    measure: waiting_duration_bucket_0_5 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN 1
               ELSE 0
               END;;
-    label: "Waiting Duration: 0-5"
-    group_label: "Duration Buckets"
+      label: "Waiting Duration: 0-5"
+      group_label: "Duration Buckets"
 
-  }
-  measure: waiting_duration_bucket_5_20 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 300 AND ${TABLE}.waiting_duration_total < 1200 THEN 1
+    }
+    measure: waiting_duration_bucket_5_20 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 300 AND ${TABLE}.waiting_duration_total < 1200 THEN 1
               ELSE 0
               END;;
-    label: "Waiting Duration: 5-20"
-    group_label: "Duration Buckets"
+      label: "Waiting Duration: 5-20"
+      group_label: "Duration Buckets"
 
-  }
-  measure: waiting_duration_bucket_20_60 {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 1200 AND ${TABLE}.waiting_duration_total < 3600 THEN 1
+    }
+    measure: waiting_duration_bucket_20_60 {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 1200 AND ${TABLE}.waiting_duration_total < 3600 THEN 1
               ELSE 0
               END;;
-    label: "Waiting Duration: 20-60"
-    group_label: "Duration Buckets"
+      label: "Waiting Duration: 20-60"
+      group_label: "Duration Buckets"
 
-  }
-  measure: waiting_duration_bucket_60_plus {
-    type:  sum
-    sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 3600 THEN 1
+    }
+    measure: waiting_duration_bucket_60_plus {
+      type:  sum
+      sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 3600 THEN 1
               ELSE 0
               END;;
-    label: "Waiting Duration: 60+"
-    group_label: "Duration Buckets"
+      label: "Waiting Duration: 60+"
+      group_label: "Duration Buckets"
 
-  }
+    }
 
 
 
@@ -932,26 +932,22 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: number
       sql: ${TABLE}.office_id ;;
       group_label: "Office Info"
-      drill_fields: [office_name]
     }
 
     dimension: office_name {
       type:  string
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
-      drill_fields: [office_name]
     }
     dimension: office_size {
       type:  string
       sql:  ${TABLE}.office_size ;;
       group_label: "Office Info"
-      drill_fields: [office_name]
     }
     dimension: area_number {
       type:  number
       sql:  ${TABLE}.area_number ;;
       group_label: "Office Info"
-      drill_fields: [office_name]
     }
     dimension: office_type {
       type:  string
@@ -973,19 +969,16 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: program_name {
       type: string
       sql: ${TABLE}.program_name ;;
-      drill_fields: [program_name,transaction_name]
     }
 
     dimension: transaction_name {
       type: string
       sql: ${TABLE}.transaction_name ;;
-      drill_fields: [transaction_name]
     }
 
     dimension: channel {
       type: string
       sql: ${TABLE}.channel ;;
-      drill_fields: [channel]
     }
 
     dimension: inaccurate_time {
@@ -997,5 +990,35 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: yesno
       sql: ${TABLE}.missing_calls ;;
     }
+
+    filter: date_range {
+      type:  date
+    }
+
+    dimension: period_difference {
+      group_label: "Flexible Filter"
+      type: number
+      sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) +1 ;;
+    }
+    dimension: current_period {
+      type: yesno
+      group_label: "Flexible Filter"
+      sql: ${TABLE}.welcome_time >= {% date_start date_range %} AND ${TABLE}.welcome_time <= DATEADD(DAY, 1, {% date_end date_range %})   ;;
+    }
+    dimension: last_period {
+      group_label: "Flexible Filter"
+      type: yesno
+      sql: ${TABLE}.welcome_time < {% date_start date_range %} AND ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %}) ;;
+      required_fields: [current_period]
+    }
+
+    dimension: on_final_date {
+      type:  yesno
+      group_label: "Flexible Filter"
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= DATEADD(DAY, 1, {% date_end date_range %})   ;;
+    }
+
+
+
 
   }
