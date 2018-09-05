@@ -38,7 +38,7 @@ LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
 LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
     ON ev.event_id = ho.root_id AND ev.collector_tstamp = ho.root_tstamp
 
-WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test')
+WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
   AND client_id IS NOT NULL
 
           ),
