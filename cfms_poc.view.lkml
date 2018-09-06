@@ -998,24 +998,25 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: period_difference {
       group_label: "Flexible Filter"
       type: number
-      sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) +1 ;;
+      sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) ;;
     }
     dimension: current_period {
       type: yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= {% date_start date_range %} AND ${TABLE}.welcome_time <= DATEADD(DAY, 1, {% date_end date_range %})   ;;
+      sql: ${TABLE}.welcome_time >= {% date_start date_range %} AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
     }
     dimension: last_period {
       group_label: "Flexible Filter"
       type: yesno
-      sql: ${TABLE}.welcome_time < {% date_start date_range %} AND ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %}) ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
+              AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
       required_fields: [current_period]
     }
 
     dimension: on_final_date {
       type:  yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= DATEADD(DAY, 1, {% date_end date_range %})   ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
     }
 
 
