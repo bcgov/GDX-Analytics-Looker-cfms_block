@@ -1009,10 +1009,28 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       type: yesno
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
-              AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
+        AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
       required_fields: [current_period]
     }
 
+
+    dimension: date_window {
+      type: string
+      group_label: "Flexible Filter"
+      case: {
+        when: {
+          sql: ${current_period} ;;
+          label: "current_period"
+        }
+
+        when: {
+          sql: ${previous_period} ;;
+          label: "previous_period"
+        }
+
+        else: "unknown"
+      }
+    }
     dimension: on_final_date {
       type:  yesno
       group_label: "Flexible Filter"
