@@ -613,16 +613,28 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     # buckets
     # Serve Duration by Service
     dimension: serve_duration_bucket {
-      type:  string
-      sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
-              WHEN ${TABLE}.serve_duration < 1200 THEN '5-20'
-              WHEN ${TABLE}.serve_duration < 3600 THEN '20-60'
-              WHEN ${TABLE}.serve_duration >= 3600 THEN '60+'
-              ELSE NULL
-              END;;
+      case: {
+        when: {
+          sql: ${TABLE}.serve_duration < 300 ;;
+          label: "0-5"
+        }
+        when: {
+          sql:  ${TABLE}.serve_duration < 1200 ;;
+          label: "5-20"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration < 3600 ;;
+          label: "20-60"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration >= 3600 ;;
+          label: "60+"
+        }
+        else:"Unknown"
+      }
       group_label: "Durations"
-
     }
+
     measure: serve_duration_bucket_0_5 {
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
