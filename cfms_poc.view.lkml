@@ -1005,7 +1005,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       sql: ${TABLE}.welcome_time >= {% date_start date_range %} AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
     }
-    dimension: last_period {
+    dimension: previous_period {
       group_label: "Flexible Filter"
       type: yesno
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
