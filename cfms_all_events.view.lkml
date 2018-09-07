@@ -25,7 +25,7 @@ view: cfms_all_events {
       ON ev.event_id = c.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
       ON ev.event_id = o.root_id
-      LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_2 AS cs
+      LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_3 AS cs
       ON ev.event_id = cs.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
       ON ev.event_id = fi.root_id
