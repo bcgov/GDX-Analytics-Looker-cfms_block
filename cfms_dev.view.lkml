@@ -408,7 +408,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           # https://docs.looker.com/data-modeling/learning-lookml/caching
       #persist_for: "1 hour"
       distribution_style: all
-      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc','TheQ_dev','TheQ_test');;
+      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod');;
     }
 
 # Build measures and dimensions

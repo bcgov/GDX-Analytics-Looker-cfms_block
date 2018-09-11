@@ -276,6 +276,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             SUM(c2.hold_duration) AS hold_duration_total,
             SUM(c2.serve_duration) AS serve_duration_total,
             -----------------------------------
+            -- A sort field on Channel, so that "in-person" shows first in the sort order
+            CASE WHEN channel = 'in-person'
+               THEN '0-in-person'
+               ELSE channel
+              END AS channel_sort,
+            -----------------------------------
             -- Add a flag for back office transactions
             CASE WHEN program_name = 'Back Office'
               THEN 'Back Office'
@@ -607,16 +613,28 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     # buckets
     # Serve Duration by Service
     dimension: serve_duration_bucket {
-      type:  string
-      sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN '0-5'
-              WHEN ${TABLE}.serve_duration < 1200 THEN '5-20'
-              WHEN ${TABLE}.serve_duration < 3600 THEN '20-60'
-              WHEN ${TABLE}.serve_duration >= 3600 THEN '60+'
-              ELSE NULL
-              END;;
+      case: {
+        when: {
+          sql: ${TABLE}.serve_duration < 300 ;;
+          label: "0-5"
+        }
+        when: {
+          sql:  ${TABLE}.serve_duration < 1200 ;;
+          label: "5-20"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration < 3600 ;;
+          label: "20-60"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration >= 3600 ;;
+          label: "60+"
+        }
+        else:"Unknown"
+      }
       group_label: "Durations"
-
     }
+
     measure: serve_duration_bucket_0_5 {
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
@@ -657,15 +675,26 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
     # Waiting Duration by Visit
     dimension: waiting_duration_bucket {
-      type:  string
-      sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN '0-5'
-              WHEN ${TABLE}.waiting_duration_total < 1200 THEN '5-20'
-              WHEN ${TABLE}.waiting_duration_total < 3600 THEN '20-60'
-              WHEN ${TABLE}.waiting_duration_total >= 3600 THEN '60+'
-              ELSE NULL
-              END;;
+      case: {
+        when: {
+          sql: ${TABLE}.waiting_duration_total < 300 ;;
+          label: "0-5"
+        }
+        when: {
+          sql:  ${TABLE}.waiting_duration_total < 1200 ;;
+          label: "5-20"
+        }
+        when: {
+          sql: ${TABLE}.waiting_duration_total < 3600 ;;
+          label: "20-60"
+        }
+        when: {
+          sql: ${TABLE}.waiting_duration_total >= 3600 ;;
+          label: "60+"
+        }
+        else:"Unknown"
+      }
       group_label: "Durations"
-
     }
     measure: waiting_duration_bucket_0_5 {
       type:  sum
@@ -976,10 +1005,19 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.transaction_name ;;
     }
 
+    # Apply a sort field, see: https://docs.looker.com/reference/field-params/order_by_field
+    dimension: channel_sort {
+      type: string
+      sql: ${TABLE}.channel_sort ;;
+      hidden: yes
+    }
+
     dimension: channel {
       type: string
       sql: ${TABLE}.channel ;;
+      order_by_field: channel_sort
     }
+
 
     dimension: inaccurate_time {
       type: yesno
