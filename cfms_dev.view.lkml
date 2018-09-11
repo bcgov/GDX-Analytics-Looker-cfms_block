@@ -931,7 +931,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Timing Points"
     }
 
-
     dimension: finish_time {
       type: date_time
       sql: ${TABLE}.finish_time ;;
@@ -947,9 +946,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.invitefromhold_time ;;
       group_label: "Timing Points"
     }
-
-
-
 
     dimension: client_id {
       type: number
@@ -1058,8 +1054,4 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= DATEADD(DAY, 1, {% date_end date_range %})   ;;
     }
-
-
-
-
   }
