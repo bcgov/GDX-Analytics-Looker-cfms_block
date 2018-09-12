@@ -4,6 +4,7 @@ view: cfms_all_events {
       -- this will include all fields for all possible events.
       -- NOTE: we are ignoring instances where there is no client_id
       SELECT
+      name_tracker AS namespace,
       event_name,
       -- CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS
       derived_tstamp AS event_time,
@@ -39,6 +40,10 @@ view: cfms_all_events {
       distribution_style: all
     }
 
+  dimension: namespace {
+    type: string
+    sql: ${TABLE}.namespace ;;
+  }
   dimension: event_name {
     type: string
     sql: ${TABLE}.event_name ;;

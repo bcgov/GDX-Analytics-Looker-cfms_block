@@ -8,6 +8,7 @@ view: cfms_dev {
                         -- See here for info on incrementally building 'derived.cfms_step1'
                         -- https://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
        SELECT
+  ev.name_tracker AS namespace,
   ev.event_name,
   -- CONVERT_TIMEZONE('UTC', 'US/Pacific', ev.derived_tstamp) AS
   ev.derived_tstamp AS event_time,
@@ -45,6 +46,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -60,6 +62,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
         stand_table AS( -- This CTE captures all events that could trigger a "Stand time".
                         -- This occurs when the "addtoqueue" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -75,6 +78,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
                         -- This occurs when the "invitecitizen" or "invitefrom list" event is hit
                         -- Note that in calculations below we will take the LAST occurence of this
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -89,6 +93,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
         start_table AS( -- This CTE captures all events that could trigger a "Start time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -103,6 +108,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
         hold_table AS( -- This CTE captures all events that could trigger a "Hold time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -117,6 +123,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
         invitefromhold_table AS( -- This CTE captures all events that could trigger a "Invite from Hold time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -132,6 +139,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
                         -- This occurs when the "finish" or "custermleft" event is hit
                         -- NOTE: there is also a count and inacurate_time flag here
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -150,6 +158,7 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
                         -- This is where we learn the service info.
                         -- NOTE: we want the LAST call for a given client_id/service_count
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -255,6 +264,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
         ),
         combined AS ( -- Combine it all together into a big table. Note that we still have duplicate entries here.
           SELECT
+          welcome_table.namespace,
           welcome_table.client_id,
           finish_table.service_count,
           welcome_table.office_id,
@@ -412,6 +422,10 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     }
 
 # Build measures and dimensions
+    measure: namespace {
+      type: string
+      sql:  ${TABLE}.namespace ;;
+    }
     measure: visits_count {
       type: number
       sql: COUNT (DISTINCT ${client_id} ) ;;
