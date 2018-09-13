@@ -40,18 +40,18 @@ view: cfms_all_events {
       distribution_style: all
     }
 
-  dimension: namespace {
-    type: string
-    sql: ${TABLE}.namespace ;;
-  }
-  dimension: event_name {
-    type: string
-    sql: ${TABLE}.event_name ;;
-  }
-  dimension: event_time {
-    type: date_time
-    sql: ${TABLE}.event_time ;;
-  }
+    dimension: namespace {
+      type: string
+      sql: ${TABLE}.namespace ;;
+    }
+    dimension: event_name {
+      type: string
+      sql: ${TABLE}.event_name ;;
+    }
+    dimension: event_time {
+      type: date_time
+      sql: ${TABLE}.event_time ;;
+    }
 
     dimension: client_id {
       type: number
@@ -99,7 +99,7 @@ view: cfms_all_events {
       sql: ${TABLE}.transaction_name ;;
     }
 
-    dimension: count {
+    dimension: transaction_count {
       type: number
       sql: ${TABLE}.count ;;
     }
@@ -109,5 +109,8 @@ view: cfms_all_events {
       sql: ${TABLE}.inaccurate_time ;;
     }
 
+    measure: count {
+      type: count
+    }
 
   }
