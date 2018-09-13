@@ -387,7 +387,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             AND program_name IS NOT NULL
             AND office_name IS NOT NULL
             AND office_name <> ''
-          GROUP BY finalset.client_id,
+          GROUP BY namespace,
+            finalset.client_id,
             finalset.service_count,
             finalset.office_id,
             office_name,
