@@ -1033,6 +1033,25 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type:  date
     }
 
+    # TODO:
+    # Dimensions current_period and last_period need to be updated.
+    # There is a problem where the dates to be compared are rolled
+    # to tomorrow's date in the local time zone of the query, resulting
+    # in incorrect reporting on the data.
+    #
+    # ${TABLE}.welcome_time must first be cast as a date that accounts for
+    # the timezone from UTC to PST prior to the date_start/date_end
+    # comparisons in the sql liquid variables.
+    #
+    # JIRA ticket GDXDSD-1189 contains discussion relating to this problem
+    # A TODO in snowplow_web_block/sessions.view.lkml parallels this problem
+    # The TODO goal of each is to unify on a generalized solution.
+    #
+    # Documentation references:
+    # Looker Liquid Variables:
+    #   https://docs.looker.com/reference/liquid-variables
+    # Using date_start and date_end with date filters:
+    #   https://discourse.looker.com/t/using-date-start-and-date-end-with-date-filters/2880
     dimension: period_difference {
       group_label: "Flexible Filter"
       type: number
