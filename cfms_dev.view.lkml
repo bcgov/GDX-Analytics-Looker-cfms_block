@@ -423,7 +423,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     }
 
 # Build measures and dimensions
-    measure: namespace {
+    dimension: namespace {
       type: string
       sql:  ${TABLE}.namespace ;;
     }
