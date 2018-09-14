@@ -180,8 +180,8 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
           SELECT
             client_id,
             service_count,
-            SUM(CASE WHEN event_name = 'hold' THEN DATEDIFF(seconds, event_time, current_date) END) +
-            SUM(CASE WHEN event_name = 'invitefromhold' THEN DATEDIFF(seconds, current_date, event_time) END) AS hold_duration,
+            SUM(CASE WHEN event_name = 'hold' THEN DATEDIFF(milliseconds, event_time, current_date)/1000.0 END) +
+            SUM(CASE WHEN event_name = 'invitefromhold' THEN DATEDIFF(milliseconds, current_date, event_time)/1000.0 END) AS hold_duration,
             COUNT( CASE WHEN event_name = 'hold' THEN 1 END) AS hold_count,
             COUNT( CASE WHEN event_name = 'invitefromhold' THEN 1 END) AS invitefromhold_count,
             -- "holdparity" if the number of hold and invitehold calls aren't balanced, we'll exclude these from caluclations below
@@ -202,17 +202,17 @@ WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
           finish_table.transactions_count,
           CASE WHEN (welcome_time IS NOT NULL AND stand_time IS NOT NULL AND inaccurate_time <> True
           AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-          ) THEN DATEDIFF(seconds, welcome_time, stand_time)
+          ) THEN DATEDIFF(milliseconds, welcome_time, stand_time)/1000.0
               ELSE NULL
               END AS reception_duration,
           CASE WHEN (stand_time IS NOT NULL AND invite_time IS NOT NULL AND inaccurate_time <> True
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-) THEN DATEDIFF(seconds, stand_time, invite_time)
+) THEN DATEDIFF(milliseconds, stand_time, invite_time)/1000.0
               ELSE NULL
               END AS waiting_duration,
           CASE WHEN (invite_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-) THEN DATEDIFF(seconds, invite_time, start_time)
+) THEN DATEDIFF(milliseconds, invite_time, start_time)/1000.0
               ELSE NULL
               END AS prep_duration,
           CASE WHEN (inaccurate_time <> True
@@ -223,11 +223,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           CASE WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
 )
-                 THEN DATEDIFF(seconds, start_time, finish_time) - hold_duration
+                 THEN DATEDIFF(milliseconds, start_time, finish_time)/1000.0 - hold_duration
               WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
 )
-                 THEN DATEDIFF(seconds, start_time, finish_time)
+                 THEN DATEDIFF(milliseconds, start_time, finish_time)/1000.0
               ELSE NULL
               END AS serve_duration,
           CASE WHEN  ( (holdparity IS NOT NULL AND holdparity <> 0)
