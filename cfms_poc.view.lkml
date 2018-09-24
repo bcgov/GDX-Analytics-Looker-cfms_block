@@ -1,19 +1,51 @@
 view: cfms_poc {
   derived_table: {
     sql: WITH step1 AS( -- Build a CTE containing all events using the name_tracker "CFMS_poc"
-                        -- this will include all fields for all possible events. We will then
-                        -- build the individual tables from this big one below
-                        -- NOTE: we are ignoring instances where there is no client_id
-                        --
-                        -- See here for info on incrementally building 'derived.cfms_step1'
-                        -- https://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
-          SELECT
-            *
-            FROM derived.cfms_step1
-          ),
+          -- this will include all fields for all possible events. We will then
+          -- build the individual tables from this big one below
+          -- NOTE: we are ignoring instances where there is no client_id
+          --
+          -- See here for info on incrementally building 'derived.cfms_step1'
+          -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
+    SELECT
+    ev.name_tracker AS namespace,
+    ev.event_name,
+    -- CONVERT_TIMEZONE('UTC', 'US/Pacific', ev.derived_tstamp) AS
+    ev.derived_tstamp AS event_time,
+    client_id,
+    service_count,
+    office_id,
+    office_type,
+    agent_id,
+    channel,
+    program_id,
+    parent_id,
+    program_name,
+    transaction_name,
+    count,
+    inaccurate_time
+
+    FROM atomic.events AS ev
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
+        ON ev.event_id = a.root_id AND ev.collector_tstamp = a.root_tstamp
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
+        ON ev.event_id = c.root_id AND ev.collector_tstamp = c.root_tstamp
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
+        ON ev.event_id = o.root_id AND ev.collector_tstamp = o.root_tstamp
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_3 AS cs
+        ON ev.event_id = cs.root_id AND ev.collector_tstamp = cs.root_tstamp
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
+        ON ev.event_id = fi.root_id AND ev.collector_tstamp = fi.root_tstamp
+    LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
+        ON ev.event_id = ho.root_id AND ev.collector_tstamp = ho.root_tstamp
+
+    WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
+        AND client_id IS NOT NULL
+    ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -29,6 +61,7 @@ view: cfms_poc {
         stand_table AS( -- This CTE captures all events that could trigger a "Stand time".
                         -- This occurs when the "addtoqueue" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -44,6 +77,7 @@ view: cfms_poc {
                         -- This occurs when the "invitecitizen" or "invitefrom list" event is hit
                         -- Note that in calculations below we will take the LAST occurence of this
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -58,6 +92,7 @@ view: cfms_poc {
         start_table AS( -- This CTE captures all events that could trigger a "Start time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -72,6 +107,7 @@ view: cfms_poc {
         hold_table AS( -- This CTE captures all events that could trigger a "Hold time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -86,6 +122,7 @@ view: cfms_poc {
         invitefromhold_table AS( -- This CTE captures all events that could trigger a "Invite from Hold time".
                         -- This occurs when the "beginservice" event is hit
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -101,6 +138,7 @@ view: cfms_poc {
                         -- This occurs when the "finish" or "custermleft" event is hit
                         -- NOTE: there is also a count and inacurate_time flag here
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -119,6 +157,7 @@ view: cfms_poc {
                         -- This is where we learn the service info.
                         -- NOTE: we want the LAST call for a given client_id/service_count
           SELECT
+            namespace,
             event_name,
             event_time,
             client_id,
@@ -140,8 +179,8 @@ view: cfms_poc {
           SELECT
             client_id,
             service_count,
-            SUM(CASE WHEN event_name = 'hold' THEN DATEDIFF(seconds, event_time, current_date) END) +
-            SUM(CASE WHEN event_name = 'invitefromhold' THEN DATEDIFF(seconds, current_date, event_time) END) AS hold_duration,
+            SUM(CASE WHEN event_name = 'hold' THEN DATEDIFF(milliseconds, event_time, current_date)/1000.0 END) +
+            SUM(CASE WHEN event_name = 'invitefromhold' THEN DATEDIFF(milliseconds, current_date, event_time)/1000.0 END) AS hold_duration,
             COUNT( CASE WHEN event_name = 'hold' THEN 1 END) AS hold_count,
             COUNT( CASE WHEN event_name = 'invitefromhold' THEN 1 END) AS invitefromhold_count,
             -- "holdparity" if the number of hold and invitehold calls aren't balanced, we'll exclude these from caluclations below
@@ -162,17 +201,17 @@ view: cfms_poc {
           finish_table.transactions_count,
           CASE WHEN (welcome_time IS NOT NULL AND stand_time IS NOT NULL AND inaccurate_time <> True
           AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-          ) THEN DATEDIFF(seconds, welcome_time, stand_time)
+          ) THEN DATEDIFF(milliseconds, welcome_time, stand_time)/1000.0
               ELSE NULL
               END AS reception_duration,
           CASE WHEN (stand_time IS NOT NULL AND invite_time IS NOT NULL AND inaccurate_time <> True
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-) THEN DATEDIFF(seconds, stand_time, invite_time)
+) THEN DATEDIFF(milliseconds, stand_time, invite_time)/1000.0
               ELSE NULL
               END AS waiting_duration,
           CASE WHEN (invite_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
-) THEN DATEDIFF(seconds, invite_time, start_time)
+) THEN DATEDIFF(milliseconds, invite_time, start_time)/1000.0
               ELSE NULL
               END AS prep_duration,
           CASE WHEN (inaccurate_time <> True
@@ -183,11 +222,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           CASE WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NOT NULL
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
 )
-                 THEN DATEDIFF(seconds, start_time, finish_time) - hold_duration
+                 THEN DATEDIFF(milliseconds, start_time, finish_time)/1000.0 - hold_duration
               WHEN (finish_time IS NOT NULL AND start_time IS NOT NULL AND inaccurate_time <> True AND hold_duration IS NULL
 AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND start_time IS NOT NULL AND finish_time IS NOT NULL)
 )
-                 THEN DATEDIFF(seconds, start_time, finish_time)
+                 THEN DATEDIFF(milliseconds, start_time, finish_time)/1000.0
               ELSE NULL
               END AS serve_duration,
           CASE WHEN  ( (holdparity IS NOT NULL AND holdparity <> 0)
@@ -224,6 +263,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
         ),
         combined AS ( -- Combine it all together into a big table. Note that we still have duplicate entries here.
           SELECT
+          welcome_table.namespace,
           welcome_table.client_id,
           finish_table.service_count,
           welcome_table.office_id,
@@ -233,6 +273,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           welcome_table.office_type AS office_type,
           welcome_table.agent_id,
           chooseservice_table.program_id,
+          chooseservice_table.parent_id,
           chooseservice_table.program_name,
           transaction_name,
           chooseservice_table.channel,
@@ -253,7 +294,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           LEFT JOIN chooseservice_table ON welcome_table.client_id = chooseservice_table.client_id AND finish_table.service_count = chooseservice_table.service_count
           LEFT JOIN hold_table ON welcome_table.client_id = hold_table.client_id AND finish_table.service_count = hold_table.service_count
           LEFT JOIN invitefromhold_table ON welcome_table.client_id = invitefromhold_table.client_id AND finish_table.service_count = invitefromhold_table.service_count
-          LEFT JOIN servicebc.office_info ON servicebc.office_info.id = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
+          LEFT JOIN servicebc.office_info ON servicebc.office_info.rmsofficecode = chooseservice_table.office_id AND end_date IS NULL -- for now, get the most recent office info
           LEFT JOIN finalcalc AS c1 ON welcome_table.client_id = c1.client_id AND finish_table.service_count = c1.service_count
         ),
           finalset AS ( -- Use the ROW_NUMBER method again to get a unique list for each client_id/service_count pair
@@ -351,7 +392,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             AND program_name IS NOT NULL
             AND office_name IS NOT NULL
             AND office_name <> ''
-          GROUP BY finalset.client_id,
+          GROUP BY namespace,
+            finalset.client_id,
             finalset.service_count,
             finalset.office_id,
             office_name,
@@ -361,6 +403,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             agent_id,
             program_id,
             program_name,
+            parent_id,
             transaction_name,
             channel,
             inaccurate_time,
@@ -381,10 +424,14 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           # https://docs.looker.com/data-modeling/learning-lookml/caching
       #persist_for: "1 hour"
       distribution_style: all
-      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker = 'CFMS_poc';;
+      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod');;
     }
 
 # Build measures and dimensions
+    dimension: namespace {
+      type: string
+      sql:  ${TABLE}.namespace ;;
+    }
     measure: visits_count {
       type: number
       sql: COUNT (DISTINCT ${client_id} ) ;;
@@ -405,7 +452,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     }
 
     # Time based measures
-
     measure: reception_duration_per_visit_total {
       type:  sum
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
@@ -418,7 +464,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Reception Duration"
     }
-
     measure: waiting_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
@@ -448,7 +493,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Waiting Duration"
     }
-
     measure: prep_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
@@ -475,7 +519,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
     }
-
     measure: hold_duration_per_service_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
@@ -504,20 +547,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Hold Duration"
     }
-
     measure: serve_duration_per_service_total {
       type: sum
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Serve Duration"
     }
-
-    #measure: serve_duration_per_service_total_raw {
-    #  type: sum
-    #  sql:  ${TABLE}.serve_duration ;;
-    #  group_label: "Durations"
-    #}
-
     measure: serve_duration_per_service_average {
       type:  average
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
@@ -545,44 +580,37 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Serve Duration"
     }
 
-
     # Time based dimentions
     dimension: reception_duration_per_visit {
       type:  number
-
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: waiting_duration_per_service {
       type:  number
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: waiting_duration_per_visit {
       type:  number
       sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: prep_duration_per_service {
       type:  number
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: prep_duration_per_visit {
       type:  number
       sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: hold_duration_per_service {
       type:  number
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
@@ -595,14 +623,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: serve_duration_per_service {
       type:  number
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
-
     dimension: serve_duration_per_visit {
       type:  number
       sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
@@ -634,7 +660,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       }
       group_label: "Durations"
     }
-
     measure: serve_duration_bucket_0_5 {
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
@@ -642,7 +667,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Serve Duration: 0-5"
       group_label: "Duration Buckets"
-
     }
     measure: serve_duration_bucket_5_20 {
       type:  sum
@@ -651,7 +675,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Serve Duration: 5-20"
       group_label: "Duration Buckets"
-
     }
     measure: serve_duration_bucket_20_60 {
       type:  sum
@@ -660,7 +683,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Serve Duration: 20-60"
       group_label: "Duration Buckets"
-
     }
     measure: serve_duration_bucket_60_plus {
       type:  sum
@@ -669,9 +691,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Serve Duration: 60+"
       group_label: "Duration Buckets"
-
     }
-
 
     # Waiting Duration by Visit
     dimension: waiting_duration_bucket {
@@ -703,7 +723,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Waiting Duration: 0-5"
       group_label: "Duration Buckets"
-
     }
     measure: waiting_duration_bucket_5_20 {
       type:  sum
@@ -712,7 +731,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Waiting Duration: 5-20"
       group_label: "Duration Buckets"
-
     }
     measure: waiting_duration_bucket_20_60 {
       type:  sum
@@ -721,7 +739,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Waiting Duration: 20-60"
       group_label: "Duration Buckets"
-
     }
     measure: waiting_duration_bucket_60_plus {
       type:  sum
@@ -730,13 +747,9 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
               END;;
       label: "Waiting Duration: 60+"
       group_label: "Duration Buckets"
-
     }
 
-
-
     # Outlier dimensions
-
     dimension: reception_duration_zscore {
       type:  number
       sql: ${TABLE}.reception_duration_zscore ;;
@@ -762,7 +775,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.serve_duration_zscore ;;
       group_label: "Z-Scores"
     }
-
     dimension: reception_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.reception_duration_zscore) >= 3 ;;
@@ -788,32 +800,26 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: abs( ${TABLE}.serve_duration_zscore) >= 3;;
       group_label: "Z-Scores"
     }
-
     dimension: welcome_time {
       type: date_time
       sql: ${TABLE}.welcome_time ;;
       group_label: "Timing Points"
     }
-
     measure: count_of_days {
       type: number
       sql: count(distinct date(${TABLE}.welcome_time));;
     }
-
     dimension: p_key {
       primary_key: yes
       hidden: yes
       sql: ${client_id} ;;
       #sql: ${client_id} || ${program_id} || ${service_count} ;;
     }
-
-
     dimension: time {
       type: string
       sql: ${TABLE}.date_time_of_day ;;
       group_label: "Date"
     }
-
     dimension: hourly_bucket {
       type: string
       sql: ${TABLE}.hourly_bucket ;;
@@ -824,7 +830,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.half_hour_bucket ;;
       group_label: "Date"
     }
-
     dimension: date {
       type:  date
       sql:  ${TABLE}.welcome_time ;;
@@ -845,7 +850,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.welcome_time ;;
       group_label: "Date"
     }
-
     dimension: day_of_month {
       type:  date_day_of_month
       sql:  ${TABLE}.welcome_time ;;
@@ -861,7 +865,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.welcome_time + interval '1 day' ;;
       group_label: "Date"
     }
-
     dimension: is_weekend {
       type:  yesno
       sql:  ${TABLE}.isweekend ;;
@@ -902,32 +905,26 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.lastdayofpsapayperiod ;;
       group_label: "Date"
     }
-
     dimension: stand_time {
       type: date_time
       sql: ${TABLE}.stand_time ;;
       group_label: "Timing Points"
     }
-
     dimension: invite_time {
       type: date_time
       sql: ${TABLE}.invite_time ;;
       group_label: "Timing Points"
     }
-
     dimension: start_time {
       type: date_time
       sql: ${TABLE}.start_time ;;
       group_label: "Timing Points"
     }
-
     dimension: chooseservice_time {
       type: date_time
       sql:  ${TABLE}.chooseservice_time ;;
       group_label: "Timing Points"
     }
-
-
     dimension: finish_time {
       type: date_time
       sql: ${TABLE}.finish_time ;;
@@ -943,16 +940,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.invitefromhold_time ;;
       group_label: "Timing Points"
     }
-
-
-
-
     dimension: client_id {
       type: number
       sql: ${TABLE}.client_id ;;
       html: {{ rendered_value }} ;;
     }
-
     dimension: service_count {
       type: number
       sql:  ${TABLE}.service_count ;;
@@ -962,7 +954,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.office_id ;;
       group_label: "Office Info"
     }
-
     dimension: office_name {
       type:  string
       sql:  ${TABLE}.office_name ;;
@@ -983,26 +974,29 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.office_type ;;
       group_label: "Office Info"
     }
-
     dimension: agent_id {
       type: number
       sql: ${TABLE}.agent_id ;;
     }
-
     dimension: program_id {
-      type: number
+      type: string
       sql: ${TABLE}.program_id ;;
-      html: {{ rendered_value }} ;;
+      group_label: "Program Information"
     }
-
+    dimension: parent_id {
+      type: string
+      sql: ${TABLE}.parent_id ;;
+      group_label: "Program Information"
+    }
     dimension: program_name {
       type: string
       sql: ${TABLE}.program_name ;;
+      group_label: "Program Information"
     }
-
     dimension: transaction_name {
       type: string
       sql: ${TABLE}.transaction_name ;;
+      group_label: "Program Information"
     }
 
     # Apply a sort field, see: https://docs.looker.com/reference/field-params/order_by_field
@@ -1011,19 +1005,15 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.channel_sort ;;
       hidden: yes
     }
-
     dimension: channel {
       type: string
       sql: ${TABLE}.channel ;;
       order_by_field: channel_sort
     }
-
-
     dimension: inaccurate_time {
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
     }
-
     dimension: missing_calls {
       type: yesno
       sql: ${TABLE}.missing_calls ;;
@@ -1089,7 +1079,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       required_fields: [current_period]
     }
 
-
     dimension: date_window {
       type: string
       group_label: "Flexible Filter"
@@ -1098,12 +1087,10 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           sql: ${current_period} ;;
           label: "current_period"
         }
-
         when: {
           sql: ${last_period} ;;
           label: "last_period"
         }
-
         else: "unknown"
       }
     }
@@ -1112,8 +1099,4 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
     }
-
-
-
-
   }
