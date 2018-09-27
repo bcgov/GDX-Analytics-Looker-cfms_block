@@ -10,8 +10,9 @@ view: cfms_poc {
     SELECT
     ev.name_tracker AS namespace,
     ev.event_name,
-    -- CONVERT_TIMEZONE('UTC', 'US/Pacific', ev.derived_tstamp) AS
-    ev.derived_tstamp AS event_time,
+    --ev.derived_tstamp AS event_time,
+    ev.dvce_created_tstamp AS event_time, -- switching to dvce_created_tstamp to compensate for asynchronous calls
+        -- see https://discourse.snowplowanalytics.com/t/which-timestamp-is-the-best-to-see-when-an-event-occurred/538
     client_id,
     service_count,
     office_id,
