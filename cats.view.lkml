@@ -1,12 +1,16 @@
-# This view provides the "RAW" constructed server logs. It pulls together data from SBC logs and GDX logs.
-
 view: cats {
   derived_table: {
     sql: SELECT govdate,
-          node_id,
+          COALESCE(cms.node_id,SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)) AS node_id,
           get_string,
-          SPLIT_PART(dcterms_creator, '|', 2) AS page_owner,
-          SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) AS url,
+          CASE WHEN (SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) = '/gov/search')
+            THEN 'Search'
+            ELSE COALESCE (SPLIT_PART(cms.dcterms_creator, '|', 2), SPLIT_PART(cms_guid.dcterms_creator, '|', 2))
+            END AS page_owner,
+          CASE WHEN (SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) = '/gov/content')
+            THEN cms_guid.hr_url
+            ELSE SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
+          END AS url,
           SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2) AS query,
           SPLIT_PART(SPLIT_PART(REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*'), '=',2), '&', 1) AS search,
           -- REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
@@ -37,7 +41,9 @@ view: cats {
           LEFT JOIN servicebc.office_info ON (servicebc.office_info.site = sbc.city OR (sbc.city IS NULL AND servicebc.office_info.site = servicebc.cats_info.city)) AND end_date IS NULL -- for now, get the most recent office info
           JOIN servicebc.datedimension AS dd on govdate::date = dd.datekey::date
           LEFT JOIN cmslite.metadata AS cms ON cms.hr_url = 'https://www2.gov.bc.ca' || SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
-          ;;
+          LEFT JOIN cmslite.metadata AS cms_guid ON
+              SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)  =  '/gov/content'
+              AND cms_guid.node_id = SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)          ;;
     # https://docs.looker.com/data-modeling/learning-lookml/caching
     # This should cause the table to rebuild every day at 7am. May need to confirm timezones.
       sql_trigger_value: SELECT FLOOR((EXTRACT(epoch from GETDATE()) - 60*60*7)/(60*60*24)) ;;
@@ -56,17 +62,17 @@ view: cats {
       sql: ${TABLE}.url;;
       group_label: "Page Info"
     }
-  dimension: page_owner {
-    type:  string
-    sql:  ${TABLE}.page_owner ;;
-    group_label: "Page Info"
-    drill_fields: [url]
-  }
-  dimension: node_id {
-    type:  string
-    sql:  ${TABLE}.node_id ;;
-    group_label: "Page Info"
-  }
+    dimension: page_owner {
+      type:  string
+      sql:  ${TABLE}.page_owner ;;
+      group_label: "Page Info"
+      drill_fields: [url]
+    }
+    dimension: node_id {
+      type:  string
+      sql:  ${TABLE}.node_id ;;
+      group_label: "Page Info"
+    }
 
     dimension: query {
       type: string
@@ -213,31 +219,31 @@ view: cats {
     measure: count  {
       type:  count
     }
-  dimension: office_id {
-    type: number
-    sql: ${TABLE}.office_id ;;
-    group_label: "Office Info"
-    drill_fields: [office_name]
-  }
+    dimension: office_id {
+      type: number
+      sql: ${TABLE}.office_id ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
 
-  dimension: office_name {
-    type:  string
-    sql:  ${TABLE}.office_name ;;
-    group_label: "Office Info"
-    drill_fields: [office_name]
-  }
-  dimension: office_size {
-    type:  string
-    sql:  ${TABLE}.office_size ;;
-    group_label: "Office Info"
-    drill_fields: [office_name]
-  }
-  dimension: area_number {
-    type:  number
-    sql:  ${TABLE}.area_number ;;
-    group_label: "Office Info"
-    drill_fields: [office_name]
-  }
+    dimension: office_name {
+      type:  string
+      sql:  ${TABLE}.office_name ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
+    dimension: office_size {
+      type:  string
+      sql:  ${TABLE}.office_size ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
+    dimension: area_number {
+      type:  number
+      sql:  ${TABLE}.area_number ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
 
 
   }
