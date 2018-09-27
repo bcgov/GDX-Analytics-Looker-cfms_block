@@ -14,7 +14,7 @@ include: "*.view"
 explore: cfms_poc {
   access_filter: {
     field: office_name
-    user_attribute: location
+    user_attribute: office_name
     }
 }
 
@@ -23,7 +23,7 @@ explore: cfms_poc {
 explore: cfms_dev {
   access_filter: {
     field: office_name
-    user_attribute: location
+    user_attribute: office_name
   }
 }
 
