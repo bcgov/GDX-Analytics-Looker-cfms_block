@@ -1037,8 +1037,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: last_period {
       group_label: "Flexible Filter"
       type: yesno
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {$date_start})
-        AND ${TABLE}.welcome_time < {$date_start} ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, ${date_start})
+        AND ${TABLE}.welcome_time < ${date_start} ;;
       required_fields: [current_period]
     }
 
