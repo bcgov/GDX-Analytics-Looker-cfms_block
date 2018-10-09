@@ -1020,42 +1020,37 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.missing_calls ;;
     }
 
-    # date_range provides the necessary filter for Explores of current_session and last_period
-    # where current_session captures the sessions from within the date range selected
-    # and compares to last_period, which is the same duration as current_session, but
-    # is offset such that it's end date exactly precedes current_session's start date
-    filter: date_range {
-      type:  date
-    }
+  # date_range provides the necessary filter for Explores of current_period and last_period
+  # and to filter is_in_range.
+  filter: date_range {
+    type: date
+  }
 
-    # TODO:
-    # Dimensions current_period and last_period need to be updated.
-    # There is a problem where the dates to be compared are rolled
-    # to tomorrow's date in the local time zone of the query, resulting
-    # in incorrect reporting on the data.
-    #
-    # ${TABLE}.welcome_time must first be cast as a date that accounts for
-    # the timezone from UTC to PST prior to the date_start/date_end
-    # comparisons in the sql liquid variables.
-    #
-    # JIRA ticket GDXDSD-1189 contains discussion relating to this problem
-    # A TODO in snowplow_web_block/sessions.view.lkml parallels this problem
-    # The TODO goal of each is to unify on a generalized solution.
-    #
-    # Documentation references:
-    # Looker Liquid Variables:
-    #   https://docs.looker.com/reference/liquid-variables
-    # Using date_start and date_end with date filters:
-    #   https://discourse.looker.com/t/using-date-start-and-date-end-with-date-filters/2880
+  # date_start and date_end provide date range timezone corrections for
+  # use in the dimensions current_period, is_in_range, and last_period
+  #
+  # Using liquid variables: https://docs.looker.com/reference/liquid-variables
+  # Using date_start and date_end with date filters:
+  #   https://discourse.looker.com/t/using-date-start-and-date-end-with-date-filters/2880
+  dimension: date_start {
+    type: date
+    sql: {% date_start date_range %} ;;
+    hidden: yes
+  }
 
-    # period_difference calculates the number of days between the start and end dates
-    # selected on the date_range filter, as selected in an Explore.
-    # This is used by last_period to calculate its duration.
-    dimension: period_difference {
-      group_label: "Flexible Filter"
-      type: number
-      sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) ;;
-    }
+  dimension: date_end {
+    type: date
+    sql: {% date_end date_range %} ;;
+    hidden: yes
+  }
+
+  # period_difference calculates the number of days between the start and end dates
+  # selected on the date_range filter, as selected in an Explore.
+  dimension: period_difference {
+    group_label: "Flexible Filter"
+    type: number
+    sql:  DATEDIFF(DAY, ${date_start}, ${date_end})  ;;
+  }
 
     # current_period filters sessions that are within the start and end range
     # of the date_range filter, as selected in an Explore.
@@ -1064,7 +1059,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: current_period {
       type: yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= {% date_start date_range %} AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      sql: ${TABLE}.welcome_time >= ${date_start}
+        AND ${TABLE}.welcome_time <= ${date_end} ;;
     }
 
     # last_period selects the the sessions that occurred immediately prior to the current_session and
@@ -1075,8 +1071,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: last_period {
       group_label: "Flexible Filter"
       type: yesno
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
-        AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {$date_start})
+        AND ${TABLE}.welcome_time < {$date_start} ;;
       required_fields: [current_period]
     }
 
@@ -1098,6 +1094,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     dimension: on_final_date {
       type:  yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %}) AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, ${date_end}) AND ${TABLE}.welcome_time <= ${date_end}   ;;
     }
   }
