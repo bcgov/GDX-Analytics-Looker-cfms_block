@@ -7,41 +7,7 @@ view: cfms_poc {
           --
           -- See here for info on incrementally building 'derived.cfms_step1'
           -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
-    SELECT
-    ev.name_tracker AS namespace,
-    ev.event_name,
-    --ev.derived_tstamp AS event_time,
-    ev.dvce_created_tstamp AS event_time, -- switching to dvce_created_tstamp to compensate for asynchronous calls
-        -- see https://discourse.snowplowanalytics.com/t/which-timestamp-is-the-best-to-see-when-an-event-occurred/538
-    client_id,
-    service_count,
-    office_id,
-    office_type,
-    agent_id,
-    channel,
-    program_id,
-    parent_id,
-    program_name,
-    transaction_name,
-    count,
-    inaccurate_time
-
-    FROM atomic.events AS ev
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
-        ON ev.event_id = a.root_id AND ev.collector_tstamp = a.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
-        ON ev.event_id = c.root_id AND ev.collector_tstamp = c.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
-        ON ev.event_id = o.root_id AND ev.collector_tstamp = o.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_3 AS cs
-        ON ev.event_id = cs.root_id AND ev.collector_tstamp = cs.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
-        ON ev.event_id = fi.root_id AND ev.collector_tstamp = fi.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
-        ON ev.event_id = ho.root_id AND ev.collector_tstamp = ho.root_tstamp
-
-    WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
-        AND client_id IS NOT NULL
+    SELECT * FROM derived.cfms_step1
     ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
@@ -425,7 +391,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           # https://docs.looker.com/data-modeling/learning-lookml/caching
       #persist_for: "1 hour"
       distribution_style: all
-      sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod');;
+      sql_trigger_value: SELECT COUNT(*) FROM derived.cfms_step1 ;;
     }
 
 # Build measures and dimensions
