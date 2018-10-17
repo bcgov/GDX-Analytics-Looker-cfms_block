@@ -20,6 +20,7 @@ view: cats {
           ip AS gdx_ip,
           source_translated_ip,
           source_host_name,
+          source_mac_address,
           sbc.source_host_name AS asset_tag,
           flex_string,
           dd.isweekend::BOOLEAN,
@@ -115,11 +116,14 @@ view: cats {
       sql: ${TABLE}.flex_string;;
     }
 
-    dimension: asset_tag {
-      type: string
-      sql: ${TABLE}.asset_tag;;
-    }
-
+  dimension: asset_tag {
+    type: string
+    sql: ${TABLE}.asset_tag;;
+  }
+  dimension: source_mac_address {
+    type: string
+    sql: ${TABLE}.source_mac_address;;
+  }
 
     dimension: time {
       type: string
