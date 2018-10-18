@@ -425,7 +425,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       #persist_for: "1 hour"
       distribution_style: all
       sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod');;
-    }
+      }
 
 # Build measures and dimensions
     dimension: namespace {
@@ -1027,20 +1027,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type:  date
     }
 
-    # TODO:
-    # Dimensions current_period and last_period need to be updated.
-    # There is a problem where the dates to be compared are rolled
-    # to tomorrow's date in the local time zone of the query, resulting
-    # in incorrect reporting on the data.
-    #
-    # ${TABLE}.welcome_time must first be cast as a date that accounts for
-    # the timezone from UTC to PST prior to the date_start/date_end
-    # comparisons in the sql liquid variables.
-    #
-    # JIRA ticket GDXDSD-1189 contains discussion relating to this problem
-    # A TODO in snowplow_web_block/sessions.view.lkml parallels this problem
-    # The TODO goal of each is to unify on a generalized solution.
-    #
     # Documentation references:
     # Looker Liquid Variables:
     #   https://docs.looker.com/reference/liquid-variables
@@ -1079,6 +1065,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       required_fields: [current_period]
     }
 
+    # date_window tags rows as being one of either the current or the last period according to their welcome_time
+    # if the welcome time falls outside either, or is otherwise corrupted, it will return unknown.
     dimension: date_window {
       type: string
       group_label: "Flexible Filter"
@@ -1094,6 +1082,10 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
         else: "unknown"
       }
     }
+
+    # on_final_date will be yes for welcome_times in the last day of the current_period.
+    # since date ranges are selected "until (before)", this means any welcome time over the day that is one
+    # prior to the date selected as the end date in the date_range filter
     dimension: on_final_date {
       type:  yesno
       group_label: "Flexible Filter"
