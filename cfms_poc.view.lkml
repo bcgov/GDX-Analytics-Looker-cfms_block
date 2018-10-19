@@ -1050,6 +1050,23 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       }
     }
 
+  # comparison_date returns dates in the current_period providing a positive offset of
+  # the last_period date range by. Exploring comparison_date with any Measure and a pivot
+  # on session_start_window results in a pointwise comparison of current and last periods
+  dimension: comparison_date {
+    required_fields: [date_window]
+    type: date
+    sql:
+       CASE
+         WHEN ${date_window} = 'current_period' THEN
+           ${TABLE}.welcome_time
+         WHEN ${date_window} = 'last_period' THEN
+           DATEADD(DAY,${period_difference},${TABLE}.welcome_time)
+         ELSE
+           NULL
+       END ;;
+  }
+
     # on_final_date will be yes for welcome_times in the last day of the current_period.
     # since date ranges are selected "until (before)", this means any welcome time over the day that is one
     # prior to the date selected as the end date in the date_range filter
