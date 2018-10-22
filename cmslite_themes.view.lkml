@@ -2,8 +2,9 @@ view: cmslite_themes {
   derived_table: {
     sql: WITH ids AS (
       SELECT cm.node_id,
+          cm.title,
           CASE
-            WHEN cm.parent_node_id = 'CA4CBBBB070F043ACF7FB35FE3FD1081' and cm.page_type = 'BC Gov Theme' THEN cm.node_id -- On Gov.bc.ca, a page with this as root IS a theme. Will change node_id to title when available
+            WHEN cm.parent_node_id = 'CA4CBBBB070F043ACF7FB35FE3FD1081' and cm.page_type = 'BC Gov Theme' THEN cm.node_id
             WHEN cm.ancestor_nodes = '||' THEN cm.parent_node_id
             ELSE TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 2)) -- take the second entry. The first is always blank as the string has '|' on each end
           END AS theme_id,
@@ -32,6 +33,10 @@ view: cmslite_themes {
   dimension: node_id {
     type: string
     sql: ${TABLE}.node_id ;;
+  }
+  dimension: title {
+    type: string
+    sql: ${TABLE}.title ;;
   }
 
   dimension: theme {
