@@ -417,7 +417,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type:  string
       sql:  ${TABLE}.back_office ;;
     }
-
     # Time based measures
     measure: reception_duration_per_visit_total {
       type:  sum
