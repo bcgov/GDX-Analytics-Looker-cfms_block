@@ -425,6 +425,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Reception Duration"
     }
+    measure: reception_duration_per_visit_max {
+      type:  max
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Reception Duration"
+    }
     measure: reception_duration_per_visit_average {
       type:  average
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
@@ -453,6 +459,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Waiting Duration"
     }
+    measure: waiting_duration_per_visit_max {
+      type: max
+      sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Waiting Duration"
+    }
     measure: waiting_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
@@ -475,6 +487,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: prep_duration_per_visit_total {
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
+      sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Prep Duration"
+    }
+    measure: prep_duration_per_visit_max {
+      type: max
       sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
@@ -507,6 +525,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Hold Duration"
     }
+    measure: hold_duration_per_visit_max {
+      type: max
+      sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Hold Duration"
+    }
     measure: hold_duration_per_visit_average {
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
@@ -533,6 +557,13 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       value_format: "[h]:mm:ss"
       group_label: "Serve Duration"
     }
+    measure: serve_duration_per_visit_max {
+      type: max
+      sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Serve Duration"
+    }
+
     #measure: serve_duration_total_raw {
     #  type: sum_distinct
     #  sql_distinct_key: ${client_id} ;;
@@ -1050,14 +1081,14 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       }
     }
 
-  # comparison_date returns dates in the current_period providing a positive offset of
-  # the last_period date range by. Exploring comparison_date with any Measure and a pivot
-  # on session_start_window results in a pointwise comparison of current and last periods
-  dimension: comparison_date {
-    group_label: "Flexible Filter"
-    required_fields: [date_window]
-    type: date
-    sql:
+    # comparison_date returns dates in the current_period providing a positive offset of
+    # the last_period date range by. Exploring comparison_date with any Measure and a pivot
+    # on session_start_window results in a pointwise comparison of current and last periods
+    dimension: comparison_date {
+      group_label: "Flexible Filter"
+      required_fields: [date_window]
+      type: date
+      sql:
        CASE
          WHEN ${date_window} = 'current_period' THEN
            ${TABLE}.welcome_time
@@ -1066,7 +1097,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
          ELSE
            NULL
        END ;;
-  }
+    }
 
     # on_final_date will be yes for welcome_times in the last day of the current_period.
     # since date ranges are selected "until (before)", this means any welcome time over the day that is one
