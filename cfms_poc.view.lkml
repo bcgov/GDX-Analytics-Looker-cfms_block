@@ -8,6 +8,7 @@ view: cfms_poc {
           -- See here for info on incrementally building 'derived.cfms_step1'
           -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
     SELECT * FROM derived.cfms_step1
+    WHERE namespace <> 'TheQ_dev'
     ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
