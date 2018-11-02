@@ -9,7 +9,7 @@ view: cfms_poc {
           -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
     SELECT * FROM derived.cfms_step1
     WHERE namespace <> 'TheQ_dev'
-    AND client_id NOT IN (SELECT * from servicebc.bad_clientids )
+    AND client_id NOT IN (SELECT * from servicebc.bad_clientids ) -- exclude entries in servicebc.bad_clientids from all reporting
     ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
@@ -106,18 +106,23 @@ view: cfms_poc {
         finish_table AS( -- This CTE captures all events that could trigger a "Finish time".
                         -- This occurs when the "finish" or "custermleft" event is hit
                         -- NOTE: there is also a count and inacurate_time flag here
+                        --  also, inaccurate_time can be overidden by entries in servicebc.inaccurate_time_clientids
           SELECT
             namespace,
             event_name,
             event_time,
-            client_id,
+            step1.client_id,
             service_count,
             office_id,
             agent_id,
             count AS transactions_count,
-            inaccurate_time,
+            CASE
+              WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN true
+              ELSE inaccurate_time
+            END AS inaccurate_time,
             event_time finish_time
           FROM step1
+          LEFT JOIN servicebc.inaccurate_time_clientids ON step1.client_id = inaccurate_time_clientids.client_id
           WHERE event_name in ('finish','customerleft')
           ORDER BY event_time
           ),
