@@ -9,9 +9,7 @@ view: cfms_poc {
           -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
     SELECT * FROM derived.cfms_step1
     WHERE namespace <> 'TheQ_dev'
-    AND client_id NOT IN (73346, 93449, 93554, 101670, 101919, 109890, 109929, 118857, 119853, 120468, 126213, 127787, 132575, 133011, 154693, 159143, 161450, 163778, 171383, 171446, 179183, 185786, 185963, 186377, 194372, 195203, 203216, 211049, 215461, 215720, 225703, 227491, 239588, 248781, 249795, 263691, 263988, 278973, 287109, 287394, 288057, 288063, 288156,
-      3835, 3948 , 288156
-      )
+    AND client_id NOT IN (SELECT * from servicebc.bad_clientids ) -- exclude entries in servicebc.bad_clientids from all reporting
     ),
       welcome_table AS( -- This CTE captures all events that could trigger a "Welcome time".
                         -- This occurs when the "addcitizen" event is hit
@@ -108,18 +106,23 @@ view: cfms_poc {
         finish_table AS( -- This CTE captures all events that could trigger a "Finish time".
                         -- This occurs when the "finish" or "custermleft" event is hit
                         -- NOTE: there is also a count and inacurate_time flag here
+                        --  also, inaccurate_time can be overidden by entries in servicebc.inaccurate_time_clientids
           SELECT
             namespace,
             event_name,
             event_time,
-            client_id,
+            step1.client_id,
             service_count,
             office_id,
             agent_id,
             count AS transactions_count,
-            inaccurate_time,
+            CASE
+              WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN true
+              ELSE inaccurate_time
+            END AS inaccurate_time,
             event_time finish_time
           FROM step1
+          LEFT JOIN servicebc.inaccurate_time_clientids ON step1.client_id = inaccurate_time_clientids.client_id
           WHERE event_name in ('finish','customerleft')
           ORDER BY event_time
           ),
@@ -395,7 +398,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           # https://docs.looker.com/data-modeling/learning-lookml/caching
       #persist_for: "1 hour"
       distribution_style: all
-      sql_trigger_value: SELECT COUNT(*) FROM derived.cfms_step1 ;;
+      sql_trigger_value: SELECT COUNT(*) FROM derived.cfms_step1 WHERE namespace <> 'TheQ_dev' AND client_id NOT IN (SELECT * from servicebc.bad_clientids ) ;;
     }
 
 # Build measures and dimensions
