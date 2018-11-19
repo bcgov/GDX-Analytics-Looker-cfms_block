@@ -6,7 +6,7 @@ view: cfms_poc {
           -- NOTE: we are ignoring instances where there is no client_id
           --
           -- See here for info on incrementally building 'derived.cfms_step1'
-          -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
+          -- https://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
     SELECT * FROM derived.cfms_step1
     WHERE namespace <> 'TheQ_dev'
     AND client_id NOT IN (SELECT * from servicebc.bad_clientids ) -- exclude entries in servicebc.bad_clientids from all reporting
