@@ -403,53 +403,63 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
 # Build measures and dimensions
     dimension: namespace {
+      description: "The namespace identifies Production, Test, and Dev environments."
       type: string
       sql:  ${TABLE}.namespace ;;
     }
     measure: visits_count {
+      description: "Count of distinct client IDs."
       type: number
       sql: COUNT (DISTINCT ${client_id} ) ;;
       group_label: "Counts"
     }
     measure: services_count {
+      description: "Count of distinct services delivered for each visit."
       type: count
       group_label: "Counts"
     }
     measure: transactions_count {
+      description: "Count of transactions. (eg. 20 property taxes for one service)"
       type: sum
       sql:  ${TABLE}.transactions_count ;;
       group_label: "Counts"
     }
     dimension: back_office {
+      description: "Whether a given service was front or back office."
       type:  string
       sql:  ${TABLE}.back_office ;;
     }
     # Time based measures
-    measure: reception_duration_per_visit_total {
+    measure: reception_duration_total {
+      description: "Total reception duration."
       type:  sum
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Reception Duration"
     }
     measure: reception_duration_per_visit_max {
+      description: "Maximum reception duration."
       type:  max
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Reception Duration"
     }
     measure: reception_duration_per_visit_average {
+      description: "Average reception duration."
       type:  average
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Reception Duration"
     }
-    measure: waiting_duration_per_service_total {
+    measure: waiting_duration_total {
+      description: "Total waiting duration."
       type: sum
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Waiting Duration"
     }
     measure: waiting_duration_per_service_average {
+      description: "Average waiting duration per service delivered."
       type:  average
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
@@ -458,59 +468,52 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
     # See here to understand the use of sum_distinct and average_distinct:
     #    https://docs.looker.com/reference/field-reference/measure-type-reference#sum_distinct
-    measure: waiting_duration_per_visit_total {
-      type: sum_distinct
-      sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Waiting Duration"
-    }
     measure: waiting_duration_per_visit_max {
+      description: "Maximum total waiting duration per visit."
       type: max
       sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Waiting Duration"
     }
     measure: waiting_duration_per_visit_average {
+      description: "Average waiting duration per visit."
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Waiting Duration"
     }
-    measure: prep_duration_per_service_total {
+    measure: prep_duration_total {
+      description: "Total preparation duration."
       type: sum
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
     }
     measure: prep_duration_per_service_average {
+      description: "Average preparation duration per service delivered."
       type:  average
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
     }
-    measure: prep_duration_per_visit_total {
-      type: sum_distinct
-      sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Prep Duration"
-    }
     measure: prep_duration_per_visit_max {
+      description: "Maximum preparation duration per visit."
       type: max
       sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
     }
     measure: prep_duration_per_visit_average {
+      description: "Average preparation duration per visit."
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Prep Duration"
     }
-    measure: hold_duration_per_service_total {
+    measure: hold_duration_total {
+      description: "Total hold duration."
       type: sum_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
@@ -518,52 +521,44 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Hold Duration"
     }
     measure: hold_duration_per_service_average {
+      description: "Average hold duration per service delivered."
       type:  average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Hold Duration"
     }
-    measure: hold_duration_per_visit_total {
-      type: sum_distinct
-      sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Hold Duration"
-    }
     measure: hold_duration_per_visit_max {
+      description: "Maximum total hold duration per visit."
       type: max
       sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Hold Duration"
     }
     measure: hold_duration_per_visit_average {
+      description: "Average hold duration per visit."
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Hold Duration"
     }
-    measure: serve_duration_per_service_total {
+    measure: serve_duration_total {
+      description: "Total serve duration."
       type: sum
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Serve Duration"
     }
     measure: serve_duration_per_service_average {
+      description: "Average serve duration per service delivered."
       type:  average
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Serve Duration"
     }
-    measure: serve_duration_per_visit_total {
-      type: sum_distinct
-      sql_distinct_key: ${client_id} ;;
-      sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Serve Duration"
-    }
     measure: serve_duration_per_visit_max {
+      description: "Maximum total serve duration per visit."
       type: max
       sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
@@ -577,6 +572,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     #  group_label: "Durations"
     #}
     measure: serve_duration_per_visit_average {
+      description: "Average serve duration per visit."
       type: average_distinct
       sql_distinct_key: ${client_id} ;;
       sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
@@ -586,54 +582,63 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
     # Time based dimentions
     dimension: reception_duration_per_visit {
+      description: "Reception duration for this visit."
       type:  number
       sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: waiting_duration_per_service {
+      description: "Waiting duration for this individual service."
       type:  number
       sql: (1.00 * ${TABLE}.waiting_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: waiting_duration_per_visit {
+      description: "Total waiting duration for this visit."
       type:  number
       sql: (1.00 * ${TABLE}.waiting_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: prep_duration_per_service {
+      description: "Preparation duration for this individual service."
       type:  number
       sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: prep_duration_per_visit {
+      description: "Total preparation duration for this visit."
       type:  number
       sql: (1.00 * ${TABLE}.prep_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: hold_duration_per_service {
+      description: "Hold duration for this individual service."
       type:  number
       sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: hold_duration_per_visit {
+      description: "Total hold duration for this visit."
       type:  number
       sql: (1.00 * ${TABLE}.hold_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: serve_duration_per_service {
+      description: "Serve duration for this individual service."
       type:  number
       sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
       group_label: "Durations"
     }
     dimension: serve_duration_per_visit {
+      description: "Total serve duration for this visit."
       type:  number
       sql: (1.00 * ${TABLE}.serve_duration_total)/(60*60*24) ;;
       value_format: "[h]:mm:ss"
@@ -643,6 +648,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     # buckets
     # Serve Duration by Service
     dimension: serve_duration_bucket {
+      description: "Serve duration for this individual service in buckets (0-5, 5-20, 20-60, 60+ minutes)."
       case: {
         when: {
           sql: ${TABLE}.serve_duration < 300 ;;
@@ -665,6 +671,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Durations"
     }
     measure: serve_duration_bucket_0_5 {
+      description: "Count of individual services with serve duration 0-5 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration < 300 THEN 1
               ELSE 0
@@ -673,6 +680,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: serve_duration_bucket_5_20 {
+      description: "Count of individual services with serve duration 5-20 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration >= 300 AND ${TABLE}.serve_duration < 1200 THEN 1
               ELSE 0
@@ -681,6 +689,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: serve_duration_bucket_20_60 {
+      description: "Count of individual services with serve duration 20-60 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration >= 1200 AND ${TABLE}.serve_duration < 3600 THEN 1
               ELSE 0
@@ -689,6 +698,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: serve_duration_bucket_60_plus {
+      description: "Count of individual services with serve duration 60+ minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.serve_duration >= 3600 THEN 1
               ELSE 0
@@ -699,6 +709,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
     # Waiting Duration by Visit
     dimension: waiting_duration_bucket {
+      description: "Waiting duration for this individual service in buckets (0-5, 5-20, 20-60, 60+ minutes)."
       case: {
         when: {
           sql: ${TABLE}.waiting_duration_total < 300 ;;
@@ -721,6 +732,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Durations"
     }
     measure: waiting_duration_bucket_0_5 {
+      description: "Count of individual services with waiting duration 0-5 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.waiting_duration_total < 300 THEN 1
               ELSE 0
@@ -729,6 +741,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: waiting_duration_bucket_5_20 {
+      description: "Count of individual services with waiting duration 5-20 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 300 AND ${TABLE}.waiting_duration_total < 1200 THEN 1
               ELSE 0
@@ -737,6 +750,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: waiting_duration_bucket_20_60 {
+      description: "Count of individual services with waiting duration 20-60 minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 1200 AND ${TABLE}.waiting_duration_total < 3600 THEN 1
               ELSE 0
@@ -745,6 +759,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Duration Buckets"
     }
     measure: waiting_duration_bucket_60_plus {
+      description: "Count of individual services with waiting duration 60+ minutes."
       type:  sum
       sql:  CASE WHEN ${TABLE}.waiting_duration_total >= 3600 THEN 1
               ELSE 0
@@ -758,53 +773,64 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type:  number
       sql: ${TABLE}.reception_duration_zscore ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: waiting_duration_zscore {
       type:  number
       sql: ${TABLE}.waiting_duration_zscore ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: prep_duration_zscore {
       type:  number
       sql: ${TABLE}.prep_duration_zscore ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: hold_duration_zscore {
       type:  number
       sql: ${TABLE}.hold_duration_zscore ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: serve_duration_zscore {
       type:  number
       sql: ${TABLE}.serve_duration_zscore ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: reception_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.reception_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: waiting_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.waiting_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: prep_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.prep_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: hold_duration_outlier {
       type:  yesno
       sql: abs(${TABLE}.hold_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: serve_duration_outlier {
       type:  yesno
       sql: abs( ${TABLE}.serve_duration_zscore) >= 3;;
       group_label: "Z-Scores"
+      hidden: yes
     }
     dimension: welcome_time {
+      description: "Welcome time for this visit."
       type: date_time
       sql: ${TABLE}.welcome_time ;;
       group_label: "Timing Points"
@@ -812,6 +838,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: count_of_days {
       type: number
       sql: count(distinct date(${TABLE}.welcome_time));;
+      hidden: yes
     }
     dimension: p_key {
       primary_key: yes
@@ -950,6 +977,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       html: {{ rendered_value }} ;;
     }
     dimension: service_count {
+      description: "The number of this service within a visit. (ie. the 1st, 2nd, 3rd... service for a given visit.)"
       type: number
       sql:  ${TABLE}.service_count ;;
     }
@@ -957,6 +985,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: number
       sql: ${TABLE}.office_id ;;
       group_label: "Office Info"
+      hidden: yes
     }
     dimension: office_name {
       type:  string
@@ -983,11 +1012,13 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.agent_id ;;
     }
     dimension: program_id {
+      description: "The internal ID number for this program."
       type: string
       sql: ${TABLE}.program_id ;;
       group_label: "Program Information"
     }
     dimension: parent_id {
+      description: "The internal ID number for the parent of this program."
       type: string
       sql: ${TABLE}.parent_id ;;
       group_label: "Program Information"
@@ -1015,10 +1046,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       order_by_field: channel_sort
     }
     dimension: inaccurate_time {
+      description: "A flag to indicate that the timing on this service is unreliable. It will be included in counts, but not timing averages."
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
     }
     dimension: missing_calls {
+      description: "A flag to indicate that there are missing timing points for this service is unreliable. It will be included in counts, but not timing averages."
       type: yesno
       sql: ${TABLE}.missing_calls ;;
     }
@@ -1028,6 +1061,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     # and compares to last_period, which is the same duration as current_period, but
     # is offset such that it's end date exactly precedes current_period's start date
     filter: date_range {
+      description: "This provides a date range used by dimensions in the Flexible Filters group. NOTE: On its own it does not do anything."
       type:  date
     }
 
@@ -1044,6 +1078,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       type: number
       sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) ;;
+      hidden: yes
     }
 
     # current_period filters sessions that are within the start and end range
@@ -1055,6 +1090,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       sql: ${TABLE}.welcome_time >= {% date_start date_range %}
         AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      hidden: yes
     }
 
     # last_period selects the the sessions that occurred immediately prior to the current_period and
@@ -1068,6 +1104,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
         AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
       required_fields: [current_period]
+      hidden: yes
     }
 
     # is_in_current_period_or_last_period determines which sessions occur between the start of the last_period
@@ -1076,11 +1113,13 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: yesno
       sql:  ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
         AND ${TABLE}.welcome_time <= {% date_end date_range %} ;;
+      hidden: yes
     }
 
     # date_window tags rows as being one of either the current or the last period according to their welcome_time
     # if the welcome time falls outside either, or is otherwise corrupted, it will return unknown.
     dimension: date_window {
+      description: "Pivot on Date Window to compare measures between the current and last periods, use with Comparison Date"
       type: string
       group_label: "Flexible Filter"
       case: {
@@ -1100,6 +1139,8 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     # the last_period date range by. Exploring comparison_date with any Measure and a pivot
     # on date_window results in a pointwise comparison of current and last periods
     dimension: comparison_date {
+      description: "Comparison Date offsets measures from the last period to appear in the range of the current period,
+      allowing a pairwise comparison between these periods when used with Date Window."
       group_label: "Flexible Filter"
       required_fields: [date_window]
       type: date
@@ -1122,5 +1163,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       group_label: "Flexible Filter"
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %})
         AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      hidden: yes
     }
   }
