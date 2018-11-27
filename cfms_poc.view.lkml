@@ -800,34 +800,34 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       hidden: yes
     }
     dimension: reception_duration_outlier {
+      description: "Is the reception duration greater than 3 standard deviations from the average?"
       type:  yesno
       sql: abs(${TABLE}.reception_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
-      hidden: yes
     }
     dimension: waiting_duration_outlier {
+      description: "Is the waiting duration greater than 3 standard deviations from the average?"
       type:  yesno
       sql: abs(${TABLE}.waiting_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
-      hidden: yes
     }
     dimension: prep_duration_outlier {
+      description: "Is the preparation duration greater than 3 standard deviations from the average?"
       type:  yesno
       sql: abs(${TABLE}.prep_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
-      hidden: yes
     }
     dimension: hold_duration_outlier {
+      description: "Is the hold duration greater than 3 standard deviations from the average?"
       type:  yesno
       sql: abs(${TABLE}.hold_duration_zscore) >= 3 ;;
       group_label: "Z-Scores"
-      hidden: yes
     }
     dimension: serve_duration_outlier {
+      description: "Is the serve duration greater than 3 standard deviations from the average?"
       type:  yesno
       sql: abs( ${TABLE}.serve_duration_zscore) >= 3;;
       group_label: "Z-Scores"
-      hidden: yes
     }
     dimension: welcome_time {
       description: "Welcome time for this visit."
