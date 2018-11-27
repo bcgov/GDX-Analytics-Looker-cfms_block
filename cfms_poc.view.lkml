@@ -430,13 +430,14 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.back_office ;;
     }
     # Time based measures
-    measure: reception_duration_total {
-      description: "Total reception duration."
-      type:  sum
-      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-      value_format: "[h]:mm:ss"
-      group_label: "Reception Duration"
-    }
+  measure: reception_duration_total {
+    description: "Total reception duration."
+    type:  sum
+    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Reception Duration"
+  }
+
     measure: reception_duration_per_visit_max {
       description: "Maximum reception duration."
       type:  max
