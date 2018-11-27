@@ -52,6 +52,10 @@ view: cfms_all_events {
       type: date_time
       sql: ${TABLE}.event_time ;;
     }
+  dimension: event_date {
+    type: date
+    sql: ${TABLE}.event_time ;;
+  }
 
     dimension: client_id {
       type: number

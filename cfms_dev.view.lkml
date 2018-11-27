@@ -20,8 +20,8 @@ view: cfms_dev {
     channel,
     program_id,
     parent_id,
-    program_name,
-    transaction_name,
+    COALESCE(si.program, cs.program_name) AS program_name,
+    COALESCE(si.service,cs.transaction_name) AS transaction_name,
     count,
     inaccurate_time
 
@@ -38,6 +38,7 @@ view: cfms_dev {
         ON ev.event_id = fi.root_id AND ev.collector_tstamp = fi.root_tstamp
     LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
         ON ev.event_id = ho.root_id AND ev.collector_tstamp = ho.root_tstamp
+    LEFT JOIN servicebc.service_info AS si ON si.svccode = cs.program_id
 
     WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod')
         AND client_id IS NOT NULL
