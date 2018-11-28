@@ -46,7 +46,7 @@ view: cats {
           LEFT JOIN cmslite.metadata AS cms_guid ON
               SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)  =  '/gov/content'
               AND cms_guid.node_id = SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)
-          LEFT JOIN cmslite.themes ON cmslite.themes.node_id = cms.node_id;;
+          LEFT JOIN cmslite.themes ON cmslite.themes.node_id = COALESCE(cms.node_id,SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2));;
     # https://docs.looker.com/data-modeling/learning-lookml/caching
     # This should cause the table to rebuild every day at 7am. May need to confirm timezones.
       sql_trigger_value: SELECT FLOOR((EXTRACT(epoch from GETDATE()) - 60*60*7)/(60*60*24)) ;;
