@@ -7,6 +7,7 @@ view: cats {
             THEN 'Search'
             ELSE COALESCE (SPLIT_PART(cms.dcterms_creator, '|', 2), SPLIT_PART(cms_guid.dcterms_creator, '|', 2))
             END AS page_owner,
+          themes.theme,themes.subtheme,themes.theme_id,themes.subtheme_id,themes.title,
           CASE WHEN (SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) = '/gov/content')
             THEN cms_guid.hr_url
             ELSE SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
@@ -44,11 +45,44 @@ view: cats {
           LEFT JOIN cmslite.metadata AS cms ON cms.hr_url = 'https://www2.gov.bc.ca' || SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
           LEFT JOIN cmslite.metadata AS cms_guid ON
               SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)  =  '/gov/content'
-              AND cms_guid.node_id = SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)          ;;
+              AND cms_guid.node_id = SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)
+          LEFT JOIN cmslite.themes ON cmslite.themes.node_id = COALESCE(cms.node_id,SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2));;
     # https://docs.looker.com/data-modeling/learning-lookml/caching
     # This should cause the table to rebuild every day at 7am. May need to confirm timezones.
       sql_trigger_value: SELECT FLOOR((EXTRACT(epoch from GETDATE()) - 60*60*7)/(60*60*24)) ;;
       distribution_style: all
+    }
+
+    dimension: title {
+      description: "The CMS Lite page title."
+      type: string
+      sql: ${TABLE}.title ;;
+      group_label: "Page Info"
+    }
+    dimension: theme {
+      description: "The CMS Lite theme."
+      type: string
+      sql: ${TABLE}.theme ;;
+      group_label: "Page Info"
+    }
+    dimension: theme_id {
+      description: "The alphanumeric CMS Lite theme identifer."
+      type: string
+      sql: COALESCE(${TABLE}.theme_id,'') ;; #ensure that this field is not NULL, so that user attribute filters work
+      group_label: "Page Info"
+    }
+
+    dimension: subtheme {
+      description: "The CMS Lite subtheme."
+      type: string
+      sql: ${TABLE}.subtheme ;;
+      group_label: "Page Info"
+    }
+    dimension: subtheme_id {
+      description: "The alphanumeric CMS Lite subtheme identifer."
+      type: string
+      sql: ${TABLE}.subtheme_id ;;
+      group_label: "Page Info"
     }
 
 
@@ -70,6 +104,7 @@ view: cats {
       drill_fields: [url]
     }
     dimension: node_id {
+      description: "The alphanumeric CMS Lite node identifier."
       type:  string
       sql:  ${TABLE}.node_id ;;
       group_label: "Page Info"

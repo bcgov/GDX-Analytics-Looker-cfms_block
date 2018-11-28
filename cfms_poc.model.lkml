@@ -28,12 +28,6 @@ explore: cfms_dev {
 }
 
 
-explore: cats {
-  join: cmslite_themes {
-    type: left_outer
-    sql_on: ${cats.node_id} = ${cmslite_themes.node_id} ;;
-    relationship: one_to_one
-  }
-}
+explore: cats {}
 
 explore: cfms_all_events {}
