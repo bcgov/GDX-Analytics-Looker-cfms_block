@@ -54,27 +54,32 @@ view: cats {
     }
 
     dimension: title {
+      description: "The CMS Lite page title."
       type: string
       sql: ${TABLE}.title ;;
       group_label: "Page Info"
     }
     dimension: theme {
+      description: "The CMS Lite theme."
       type: string
       sql: ${TABLE}.theme ;;
       group_label: "Page Info"
     }
     dimension: theme_id {
+      description: "The alphanumeric CMS Lite theme identifer."
       type: string
       sql: COALESCE(${TABLE}.theme_id,'') ;; #ensure that this field is not NULL, so that user attribute filters work
       group_label: "Page Info"
     }
 
     dimension: subtheme {
+      description: "The CMS Lite subtheme."
       type: string
       sql: ${TABLE}.subtheme ;;
       group_label: "Page Info"
     }
     dimension: subtheme_id {
+      description: "The alphanumeric CMS Lite subtheme identifer."
       type: string
       sql: ${TABLE}.subtheme_id ;;
       group_label: "Page Info"
@@ -99,6 +104,7 @@ view: cats {
       drill_fields: [url]
     }
     dimension: node_id {
+      description: "The alphanumeric CMS Lite node identifier."
       type:  string
       sql:  ${TABLE}.node_id ;;
       group_label: "Page Info"
