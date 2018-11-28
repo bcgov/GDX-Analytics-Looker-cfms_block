@@ -240,6 +240,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           welcome_table.namespace,
           welcome_table.client_id,
           finish_table.service_count,
+          finish_table.event_name AS finish_event,
           welcome_table.office_id,
           office_info.site AS office_name,
           office_info.officesize AS office_size,
@@ -381,6 +382,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             transaction_name,
             channel,
             inaccurate_time,
+            finish_event,
             finalset.transactions_count,
             finalset.missing_calls,
             welcome_time, stand_time, invite_time, start_time, finish_time, chooseservice_time, hold_time, invitefromhold_time,
@@ -429,15 +431,23 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type:  string
       sql:  ${TABLE}.back_office ;;
     }
+    dimension: finish_type {
+      description: "Whether the client finished successfully, left, or their ticket is still open."
+      type:  string
+      sql: CASE
+        WHEN ${TABLE}.finish_event = 'finish' THEN 'Finish'
+        WHEN ${TABLE}.finish_event = 'customerleft' THEN 'Customer Left'
+        ELSE 'Open Ticket'
+      END;;
+    }
     # Time based measures
-  measure: reception_duration_total {
-    description: "Total reception duration."
-    type:  sum
-    sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
-    value_format: "[h]:mm:ss"
-    group_label: "Reception Duration"
-  }
-
+    measure: reception_duration_total {
+      description: "Total reception duration."
+      type:  sum
+      sql: (1.00 * ${TABLE}.reception_duration)/(60*60*24) ;;
+      value_format: "[h]:mm:ss"
+      group_label: "Reception Duration"
+    }
     measure: reception_duration_per_visit_max {
       description: "Maximum reception duration."
       type:  max
