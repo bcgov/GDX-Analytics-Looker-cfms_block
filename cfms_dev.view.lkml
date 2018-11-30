@@ -426,7 +426,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       #persist_for: "1 hour"
       distribution_style: all
       sql_trigger_value: SELECT COUNT(*) FROM atomic.events WHERE name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod');;
-      }
+    }
 
 # Build measures and dimensions
     dimension: namespace {
@@ -993,6 +993,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: string
       sql: ${TABLE}.program_name ;;
       group_label: "Program Information"
+      drill_fields: [transaction_name]
+      link: {
+        label: "test"
+        url: "/explore/cfms_poc/cfms_poc?fields=cfms_poc.transaction_name,cfms_poc.transactions_count,cfms_poc.channel&pivots=cfms_poc.channel&f[cfms_poc.office_name]=Prince+George&f[cfms_poc.program_name]=ICBC&f[cfms_poc.date]=28+days+ago+for+28+days&sorts=cfms_poc.channel+0,cfms_poc.transactions_count+desc+6&limit=1000&column_limit=50&row_total=right&vis=%7B%22stacking%22%3A%22normal%22%2C%22colors%22%3A%5B%22%23991426%22%2C%22%23a9c574%22%2C%22%23929292%22%2C%22%239fdee0%22%2C%22%231f3e5a%22%2C%22%2390c8ae%22%2C%22%2392818d%22%2C%22%23c5c6a6%22%2C%22%2382c2ca%22%2C%22%23cee0a0%22%2C%22%23928fb4%22%2C%22%239fc190%22%5D%2C%22show_value_labels%22%3Atrue%2C%22label_density%22%3A25%2C%22legend_position%22%3A%22center%22%2C%22x_axis_gridlines%22%3Afalse%2C%22y_axis_gridlines%22%3Atrue%2C%22show_view_names%22%3Afalse%2C%22point_style%22%3A%22none%22%2C%22series_colors%22%3A%7B%7D%2C%22limit_displayed_rows%22%3Afalse%2C%22y_axes%22%3A%5B%5D%2C%22y_axis_combined%22%3Atrue%2C%22show_y_axis_labels%22%3Atrue%2C%22show_y_axis_ticks%22%3Atrue%2C%22y_axis_tick_density%22%3A%22default%22%2C%22y_axis_tick_density_custom%22%3A5%2C%22show_x_axis_label%22%3Atrue%2C%22show_x_axis_ticks%22%3Atrue%2C%22x_axis_scale%22%3A%22auto%22%2C%22y_axis_scale_mode%22%3A%22linear%22%2C%22x_axis_reversed%22%3Afalse%2C%22y_axis_reversed%22%3Afalse%2C%22plot_size_by_field%22%3Afalse%2C%22ordering%22%3A%22desc%22%2C%22show_null_labels%22%3Afalse%2C%22show_dropoff%22%3Afalse%2C%22show_totals_labels%22%3Afalse%2C%22show_silhouette%22%3Afalse%2C%22totals_color%22%3A%22%23808080%22%2C%22type%22%3A%22looker_column%22%2C%22hidden_fields%22%3A%5B%22calculation_2%22%5D%7D&filter_config=%7B%22cfms_poc.office_name%22%3A%5B%7B%22type%22%3A%22%3D%22%2C%22values%22%3A%5B%7B%22constant%22%3A%22Prince+George%22%7D%2C%7B%7D%5D%2C%22id%22%3A0%2C%22error%22%3Afalse%7D%5D%2C%22cfms_poc.program_name%22%3A%5B%7B%22type%22%3A%22%3D%22%2C%22values%22%3A%5B%7B%22constant%22%3A%22ICBC%22%7D%2C%7B%7D%5D%2C%22id%22%3A1%2C%22error%22%3Afalse%7D%5D%2C%22cfms_poc.date%22%3A%5B%7B%22type%22%3A%22past%22%2C%22values%22%3A%5B%7B%22constant%22%3A%2228%22%2C%22unit%22%3A%22c_day%22%7D%2C%7B%7D%5D%2C%22id%22%3A2%2C%22error%22%3Afalse%7D%5D%7D&dynamic_fields=%5B%5D&origin=share-expanded"
+      }
     }
     dimension: transaction_name {
       type: string
@@ -1072,7 +1077,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     filter: is_in_current_period_or_last_period {
       type: yesno
       sql:  ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
-          AND ${TABLE}.welcome_time <= {% date_end date_range %} ;;
+        AND ${TABLE}.welcome_time <= {% date_end date_range %} ;;
     }
 
     # date_window tags rows as being one of either the current or the last period according to their welcome_time
