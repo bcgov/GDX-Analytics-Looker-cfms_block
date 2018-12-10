@@ -1034,16 +1034,75 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.parent_id ;;
       group_label: "Program Information"
     }
+
+
+    measure: dummy {
+      type: number
+      sql: 1=1 ;;
+      drill_fields: [transaction_name, channel, transactions_count]
+    }
+
     dimension: program_name {
       type: string
       sql: ${TABLE}.program_name ;;
       group_label: "Program Information"
       link: {
-        label: "test"
-        url: "/dashboards/43?Office%20Name={{ _filters['cfms_poc.office_name'] | url_encode }}&Program%20Name={{ value }}&Date={{ _filters['cfms_poc.date'] | url_encode }}"
-      }
+        label: "Program Distribution"
+        url: "
+        {% assign table_calc = '[]' %}
+        {% assign filter_config = '{\"cfms_poc.office_name\":[{\"type\":\"=\",\"values\":[{\"constant\":\"\"},{}],\"id\":6,\"error\":false}],\"cfms_poc.program_name\":[{\"type\":\"=\",\"values\":[{\"constant\":\"Other\"},{}],\"id\":7,\"error\":false}],\"cfms_poc.date\":[{\"type\":\"past\",\"values\":[{\"constant\":\"60\",\"unit\":\"day\"},{}],\"id\":8,\"error\":false}]}' %}
+        {% assign vis_config = '
+        {\"stacking\":\"normal\" ,
+        \"colors\":[\"#991426\" ,
+        \"#a9c574\" ,
+        \"#929292\" ,
+        \"#9fdee0\" ,
+        \"#1f3e5a\" ,
+        \"#90c8ae\" ,
+        \"#92818d\" ,
+        \"#c5c6a6\" ,
+        \"#82c2ca\" ,
+        \"#cee0a0\" ,
+        \"#928fb4\" ,
+        \"#9fc190\"] ,
+        \"show_value_labels\":true ,
+        \"label_density\":25 ,
+        \"legend_position\":\"center\" ,
+        \"x_axis_gridlines\":false ,
+        \"y_axis_gridlines\":true ,
+        \"show_view_names\":false ,
+        \"point_style\":\"none\" ,
+        \"series_colors\":{} ,
+        \"limit_displayed_rows\":false ,
+        \"y_axes\":[] ,
+        \"y_axis_combined\":true ,
+        \"show_y_axis_labels\":true ,
+        \"show_y_axis_ticks\":true ,
+        \"y_axis_tick_density\":\"default\" ,
+        \"y_axis_tick_density_custom\":5 ,
+        \"show_x_axis_label\":true ,
+        \"show_x_axis_ticks\":true ,
+        \"x_axis_scale\":\"auto\" ,
+        \"y_axis_scale_mode\":\"linear\" ,
+        \"x_axis_reversed\":false ,
+        \"y_axis_reversed\":false ,
+        \"plot_size_by_field\":false ,
+        \"ordering\":\"desc\" ,
+        \"show_null_labels\":false ,
+        \"show_dropoff\":false ,
+        \"show_totals_labels\":false ,
+        \"show_silhouette\":false ,
+        \"totals_color\":\"#808080\" ,
+        \"type\":\"looker_column\" ,
+        \"hidden_fields\":[\"calculation_2\"]}' %}
+
+      {{ dummy._link }}&vis_config={{ vis_config | encode_uri }}&pivots=cfms_poc.channel&sorts=cfms_poc.channel 0,cfms_poc.transactions_count desc 6&limit=1000&column_limit=50&row_total=right&filter_config={{ filter_config| encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"              }
 
     }
+
+
+
+
     dimension: transaction_name {
       type: string
       sql: ${TABLE}.transaction_name ;;
