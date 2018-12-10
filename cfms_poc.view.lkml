@@ -1096,10 +1096,72 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
         \"type\":\"looker_column\" ,
         \"hidden_fields\":[\"calculation_2\"]}' %}
 
-      {{ dummy._link }}&vis_config={{ vis_config | encode_uri }}&pivots=cfms_poc.channel&sorts=cfms_poc.channel 0,cfms_poc.transactions_count desc 6&limit=1000&column_limit=50&row_total=right&filter_config={{ filter_config| encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"              }
-
+      {{ dummy._link }}&vis_config={{ vis_config | encode_uri }}&pivots=cfms_poc.channel&sorts=cfms_poc.channel 0,cfms_poc.transactions_count desc 6&limit=1000&column_limit=50&row_total=right&filter_config={{ filter_config| encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"
     }
+  }
+  measure: dummy_service_count {
+    type: number
+    sql: 1=1 ;;
+    drill_fields: [transaction_name, prep_duration_per_visit_average, serve_duration_per_visit_average, reception_duration_per_visit_average]
+  }
 
+  dimension: program_name_2 {
+    type: string
+    sql: ${TABLE}.program_name ;;
+    group_label: "Program Information"
+    link: {
+      label: "Service Time"
+            url: "
+      {% assign table_calc = '[{\"table_calculation\":\"average_service_time\",\"label\":\"Average Service Time\",\"expression\":\"${cfms_poc.prep_duration_per_visit_average}+${cfms_poc.serve_duration_per_visit_average}+${cfms_poc.reception_duration_per_visit_average}\",\"value_format\":\"[h]:mm:ss\",\"value_format_name\":null,\"_kind_hint\":\"measure\",\"_type_hint\":\"number\"}]' %}
+      {% assign filter_config = '{\"cfms_poc.office_name\":[{\"type\":\"=\",\"values\":[{\"constant\":\"\"},{}],\"id\":8,\"error\":false}],\"cfms_poc.program_name\":[{\"type\":\"=\",\"values\":[{\"constant\":\"\"},{}],\"id\":9,\"error\":false}],\"cfms_poc.date\":[{\"type\":\"anytime\",\"values\":[{},{}],\"id\":10,\"error\":false}],\"cfms_poc.back_office\":[{\"type\":\"=\",\"values\":[{\"constant\":\"Front Office\"},{}],\"id\":11,\"error\":false}]}' %}
+      {% assign vis_config = '
+        {\"stacking\":\"\" ,
+          \"colors\":[\"#991426\" ,
+            \"#a9c574\" ,
+            \"#929292\" ,
+            \"#9fdee0\" ,
+            \"#1f3e5a\" ,
+            \"#90c8ae\" ,
+            \"#92818d\" ,
+            \"#c5c6a6\" ,
+            \"#82c2ca\" ,
+            \"#cee0a0\" ,
+            \"#928fb4\" ,
+            \"#9fc190\"] ,
+          \"show_value_labels\":false ,
+          \"label_density\":25 ,
+          \"legend_position\":\"center\" ,
+          \"x_axis_gridlines\":false ,
+          \"y_axis_gridlines\":true ,
+          \"show_view_names\":false ,
+          \"point_style\":\"none\" ,
+          \"series_colors\":{} ,
+          \"limit_displayed_rows\":false ,
+          \"y_axis_combined\":true ,
+          \"show_y_axis_labels\":true ,
+          \"show_y_axis_ticks\":true ,
+          \"y_axis_tick_density\":\"default\" ,
+          \"y_axis_tick_density_custom\":5 ,
+          \"show_x_axis_label\":true ,
+          \"show_x_axis_ticks\":true ,
+          \"x_axis_scale\":\"auto\" ,
+          \"y_axis_scale_mode\":\"linear\" ,
+          \"x_axis_reversed\":false ,
+          \"y_axis_reversed\":false ,
+          \"plot_size_by_field\":false ,
+          \"ordering\":\"none\" ,
+          \"show_null_labels\":false ,
+          \"show_totals_labels\":false ,
+          \"show_silhouette\":false ,
+          \"totals_color\":\"#808080\" ,
+          \"type\":\"looker_column\" ,
+          \"hidden_fields\":[\"cfms_poc.prep_duration_per_visit_average\" ,
+            \"cfms_poc.reception_duration_per_visit_average\" ,
+            \"cfms_poc.serve_duration_per_visit_average\"] ,
+          \"y_axes\":[]}' %}
+
+      {{ dummy_service_count._link }}&vis_config={{ vis_config | encode_uri }}&sorts=average_service_time desc&limit=1000&column_limit=50&filter_config={{ filter_config | encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"}
+  }
 
 
 
