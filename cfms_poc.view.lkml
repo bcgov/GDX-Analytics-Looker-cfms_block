@@ -430,6 +430,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: dummy_for_back_office {
       type: number
       sql: 1=1 ;;
+      hidden: yes
       drill_fields: [channel, program_name, prep_duration_total, reception_duration_total, serve_duration_total]
     }
 
@@ -1109,6 +1110,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: dummy {
       type: number
       sql: 1=1 ;;
+      hidden: yes
       drill_fields: [transaction_name, channel, transactions_count]
     }
     dimension: program_name {
@@ -1178,6 +1180,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: dummy_service_count {
       type: number
       sql: 1=1 ;;
+      hidden: yes
       drill_fields: [transaction_name, prep_duration_per_visit_average, serve_duration_per_visit_average, reception_duration_per_visit_average]
     }
 
