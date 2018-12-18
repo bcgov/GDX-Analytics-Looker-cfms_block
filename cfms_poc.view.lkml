@@ -1298,79 +1298,81 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       hidden: yes
     }
 
-    # current_period filters sessions that are within the start and end range
-    # of the flexible_filter_date_range filter, as selected in an Explore.
-    # the flexible_filter_date_range filter is required for current_period
-    # the last_period dimension is required to compare against current_period
-    dimension: current_period {
+    # is_in_current_period_or_last_period determines which sessions occur on an after the start of the last_period
+    # and before end of the current_period, as selected on the flexible_filter_date_range filter in an Explore.
+    # Here's an explanation of why we use DATEDIFF(SECOND and not DAY
+    #    https://www.sqlteam.com/articles/datediff-function-demystified
+    filter: is_in_current_period_or_last_period {
       type: yesno
+      sql:  DATEDIFF(SECOND,${TABLE}.welcome_time, {% date_start flexible_filter_date_range %}) / 86400.0 <= ${period_difference}
+        AND ${TABLE}.welcome_time < {% date_end flexible_filter_date_range %} ;;
+    }
+
+
+    # current period identifies sessions falling between the start and end of the date range selected
+    dimension: current_period {
       group_label: "Flexible Filter"
+      type: yesno
       sql: ${TABLE}.welcome_time >= {% date_start flexible_filter_date_range %}
-        AND ${TABLE}.welcome_time <= {% date_end flexible_filter_date_range %}   ;;
+        AND ${TABLE}.welcome_time < {% date_end flexible_filter_date_range %} ;;
       hidden: yes
     }
 
-    # last_period selects the the sessions that occurred immediately prior to the current_period and
-    # over the same duration the current_period. Used in an explore, the flexible_filter_date_range filter provides
-    # the necessary is how input for date ranges to compare in this way.
-    # the flexible_filter_date_range filter is required for last_period
-    # the current_period dimension is required to compare against last_period
+    # last_period selects the the sessions that occurred immediately prior to the current_session and
+    # over the same number of days as the current_session.
+    # For instance, it would provide a suitable comparison of data from one week to the next.
     dimension: last_period {
       group_label: "Flexible Filter"
       type: yesno
       sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
-        AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end flexible_filter_date_range %}) ;;
-      required_fields: [current_period]
+        AND ${TABLE}.welcome_time < {% date_start flexible_filter_date_range %} ;;
       hidden: yes
     }
 
-    # is_in_current_period_or_last_period determines which sessions occur between the start of the last_period
-    # and the end of the current_period, as selected on the flexible_filter_date_range filter in an Explore.
-    filter: is_in_current_period_or_last_period {
-      type: yesno
-      sql:  ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
-        AND ${TABLE}.welcome_time <= {% date_end flexible_filter_date_range %} ;;
-      hidden: yes
-    }
-
-    # date_window tags rows as being one of either the current or the last period according to their welcome_time
-    # if the welcome time falls outside either, or is otherwise corrupted, it will return unknown.
+    # dimension: date_window provides the pivot label for constructing tables and charts
+    # that compare current_period and last_period
     dimension: date_window {
-      description: "Pivot on Date Window to compare measures between the current and last periods, use with Comparison Date"
-      type: string
       group_label: "Flexible Filter"
       case: {
         when: {
-          sql: ${current_period} ;;
+          sql: ${TABLE}.welcome_time >= {% date_start flexible_filter_date_range %}
+            AND ${TABLE}.welcome_time < {% date_end flexible_filter_date_range %} ;;
           label: "current_period"
         }
         when: {
-          sql: ${last_period} ;;
+          sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
+            AND ${TABLE}.welcome_time < {% date_start flexible_filter_date_range %} ;;
           label: "last_period"
         }
         else: "unknown"
       }
+      description: "Pivot on Date Window to compare measures between the current and last periods, use with Comparison Date"
     }
 
-    # comparison_date returns dates in the current_period providing a positive offset of
-    # the last_period date range by. Exploring comparison_date with any Measure and a pivot
-    # on date_window results in a pointwise comparison of current and last periods
-    dimension: comparison_date {
-      description: "Comparison Date offsets measures from the last period to appear in the range of the current period,
-      allowing a pairwise comparison between these periods when used with Date Window."
-      group_label: "Flexible Filter"
-      required_fields: [date_window]
-      type: date
-      sql:
+  # comparison_date returns dates in the current_period providing a positive offset of
+  # the last_period date range. Exploring comparison_date with any measure and a pivot
+  # on date_window results in a pointwise comparison of current and last periods
+  #
+  # Note that we need to put this back into UTC as otherwise, Looker will double convert the timezone later
+  dimension: comparison_date {
+    group_label: "Flexible Filter"
+    required_fields: [date_window]
+    description: "Comparison Date offsets measures from the last period to appear in the range of the current period,
+    allowing a pairwise comparison between these periods when used with Date Window."
+    type: date
+    sql:
        CASE
-         WHEN ${date_window} = 'current_period' THEN
-           ${TABLE}.welcome_time
-         WHEN ${date_window} = 'last_period' THEN
-           DATEADD(DAY,${period_difference},${TABLE}.welcome_time)
+         WHEN ${TABLE}.welcome_time >= {% date_start flexible_filter_date_range %}
+             AND ${TABLE}.welcome_time < {% date_end flexible_filter_date_range %}
+            THEN CONVERT_TIMEZONE('America/Los_Angeles','UTC', ${welcome_time})
+         WHEN ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
+             AND ${TABLE}.welcome_time < {% date_start flexible_filter_date_range %}
+            THEN DATEADD(DAY,${period_difference},(CONVERT_TIMEZONE('America/Los_Angeles','UTC', ${welcome_time})))
          ELSE
            NULL
        END ;;
-    }
+  }
+
 
     # on_final_date will be yes for welcome_times in the last day of the current_period.
     # since date ranges are selected "until (before)", this means any welcome time over the day that is one
