@@ -1273,11 +1273,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql: ${TABLE}.missing_calls ;;
     }
 
-    # date_range provides the necessary filter for Explores of current_period and last_period
+    # flexible_filter_date_range provides the necessary filter for Explores of current_period and last_period
     # where current_period captures the sessions from within the date range selected
     # and compares to last_period, which is the same duration as current_period, but
     # is offset such that it's end date exactly precedes current_period's start date
-    filter: date_range {
+    filter: flexible_filter_date_range {
       description: "This provides a date range used by dimensions in the Flexible Filters group. NOTE: On its own it does not do anything."
       type:  date
     }
@@ -1289,47 +1289,47 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     #   https://discourse.looker.com/t/using-date-start-and-date-end-with-date-filters/2880
 
     # period_difference calculates the number of days between the start and end dates
-    # selected on the date_range filter, as selected in an Explore.
+    # selected on the flexible_filter_date_range filter, as selected in an Explore.
     # This is used by last_period to calculate its duration.
     dimension: period_difference {
       group_label: "Flexible Filter"
       type: number
-      sql: DATEDIFF(DAY, {% date_start date_range %}, {% date_end date_range %}) ;;
+      sql: DATEDIFF(DAY, {% date_start flexible_filter_date_range %}, {% date_end flexible_filter_date_range %}) ;;
       hidden: yes
     }
 
     # current_period filters sessions that are within the start and end range
-    # of the date_range filter, as selected in an Explore.
-    # the date_range filter is required for current_period
+    # of the flexible_filter_date_range filter, as selected in an Explore.
+    # the flexible_filter_date_range filter is required for current_period
     # the last_period dimension is required to compare against current_period
     dimension: current_period {
       type: yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= {% date_start date_range %}
-        AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      sql: ${TABLE}.welcome_time >= {% date_start flexible_filter_date_range %}
+        AND ${TABLE}.welcome_time <= {% date_end flexible_filter_date_range %}   ;;
       hidden: yes
     }
 
     # last_period selects the the sessions that occurred immediately prior to the current_period and
-    # over the same duration the current_period. Used in an explore, the date_range filter provides
+    # over the same duration the current_period. Used in an explore, the flexible_filter_date_range filter provides
     # the necessary is how input for date ranges to compare in this way.
-    # the date_range filter is required for last_period
+    # the flexible_filter_date_range filter is required for last_period
     # the current_period dimension is required to compare against last_period
     dimension: last_period {
       group_label: "Flexible Filter"
       type: yesno
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
-        AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end date_range %}) ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
+        AND ${TABLE}.welcome_time <= DATEADD(DAY, -${period_difference}, {% date_end flexible_filter_date_range %}) ;;
       required_fields: [current_period]
       hidden: yes
     }
 
     # is_in_current_period_or_last_period determines which sessions occur between the start of the last_period
-    # and the end of the current_period, as selected on the date_range filter in an Explore.
+    # and the end of the current_period, as selected on the flexible_filter_date_range filter in an Explore.
     filter: is_in_current_period_or_last_period {
       type: yesno
-      sql:  ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start date_range %})
-        AND ${TABLE}.welcome_time <= {% date_end date_range %} ;;
+      sql:  ${TABLE}.welcome_time >= DATEADD(DAY, -${period_difference}, {% date_start flexible_filter_date_range %})
+        AND ${TABLE}.welcome_time <= {% date_end flexible_filter_date_range %} ;;
       hidden: yes
     }
 
@@ -1374,12 +1374,12 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
 
     # on_final_date will be yes for welcome_times in the last day of the current_period.
     # since date ranges are selected "until (before)", this means any welcome time over the day that is one
-    # prior to the date selected as the end date in the date_range filter
+    # prior to the date selected as the end date in the flexible_filter_date_range filter
     dimension: on_final_date {
       type:  yesno
       group_label: "Flexible Filter"
-      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end date_range %})
-        AND ${TABLE}.welcome_time <= {% date_end date_range %}   ;;
+      sql: ${TABLE}.welcome_time >= DATEADD(DAY, -1, {% date_end flexible_filter_date_range %})
+        AND ${TABLE}.welcome_time <= {% date_end flexible_filter_date_range %}   ;;
       hidden: yes
     }
   }
