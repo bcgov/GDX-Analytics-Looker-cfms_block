@@ -752,6 +752,30 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       }
       group_label: "Durations"
     }
+    dimension: serve_duration_bucket_sort {
+      description: "Use in combination with Serve Duration Bucket to enforce sort order. Hide from display."
+      case: {
+        when: {
+          sql: ${TABLE}.serve_duration < 300 ;;
+          label: "1. 0-5"
+        }
+        when: {
+          sql:  ${TABLE}.serve_duration < 1200 ;;
+          label: "2. 5-20"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration < 3600 ;;
+          label: "3. 20-60"
+        }
+        when: {
+          sql: ${TABLE}.serve_duration >= 3600 ;;
+          label: "4. 60+"
+        }
+        else:"5. Unknown"
+      }
+      group_label: "Durations"
+    }
+
     measure: serve_duration_bucket_0_5 {
       description: "Count of individual services with serve duration 0-5 minutes."
       type:  sum
@@ -810,6 +834,30 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
           label: "60+"
         }
         else:"Unknown"
+      }
+      group_label: "Durations"
+    }
+    # Waiting Duration by Visit
+    dimension: waiting_duration_bucket_sort {
+      description: "Use in combination with Waiting Duration Bucket to enforce sort order. Hide from display."
+      case: {
+        when: {
+          sql: ${TABLE}.waiting_duration_total < 300 ;;
+          label: "1. 0-5"
+        }
+        when: {
+          sql:  ${TABLE}.waiting_duration_total < 1200 ;;
+          label: "2. 5-20"
+        }
+        when: {
+          sql: ${TABLE}.waiting_duration_total < 3600 ;;
+          label: "3. 20-60"
+        }
+        when: {
+          sql: ${TABLE}.waiting_duration_total >= 3600 ;;
+          label: "4. 60+"
+        }
+        else:"5. Unknown"
       }
       group_label: "Durations"
     }
@@ -1188,7 +1236,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       type: string
       sql: ${TABLE}.program_name ;;
       group_label: "Program Information"
-      description: "Program Name with drill to ervice Time."
+      description: "Program Name with drill to Service Time."
       link: {
         label: "Service Time"
         url: "
@@ -1349,18 +1397,18 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       description: "Pivot on Date Window to compare measures between the current and last periods, use with Comparison Date"
     }
 
-  # comparison_date returns dates in the current_period providing a positive offset of
-  # the last_period date range. Exploring comparison_date with any measure and a pivot
-  # on date_window results in a pointwise comparison of current and last periods
-  #
-  # Note that we need to put this back into UTC as otherwise, Looker will double convert the timezone later
-  dimension: comparison_date {
-    group_label: "Flexible Filter"
-    required_fields: [date_window]
-    description: "Comparison Date offsets measures from the last period to appear in the range of the current period,
-    allowing a pairwise comparison between these periods when used with Date Window."
-    type: date
-    sql:
+    # comparison_date returns dates in the current_period providing a positive offset of
+    # the last_period date range. Exploring comparison_date with any measure and a pivot
+    # on date_window results in a pointwise comparison of current and last periods
+    #
+    # Note that we need to put this back into UTC as otherwise, Looker will double convert the timezone later
+    dimension: comparison_date {
+      group_label: "Flexible Filter"
+      required_fields: [date_window]
+      description: "Comparison Date offsets measures from the last period to appear in the range of the current period,
+      allowing a pairwise comparison between these periods when used with Date Window."
+      type: date
+      sql:
        CASE
          WHEN ${TABLE}.welcome_time >= {% date_start flexible_filter_date_range %}
              AND ${TABLE}.welcome_time < {% date_end flexible_filter_date_range %}
@@ -1371,7 +1419,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
          ELSE
            NULL
        END ;;
-  }
+    }
 
 
     # on_final_date will be yes for welcome_times in the last day of the current_period.
