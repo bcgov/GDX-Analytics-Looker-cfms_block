@@ -362,7 +362,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
             to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', welcome_time), 'HH24:MI:SS') AS date_time_of_day
           FROM finalset
           LEFT JOIN finalcalc AS c2 ON c2.client_id = finalset.client_id
-          JOIN servicebc.datedimension AS dd on welcome_time::date = dd.datekey::date
+          JOIN servicebc.datedimension AS dd on CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',welcome_time)::date = dd.datekey::date
           WHERE finalset.client_id_ranked = 1
             AND program_name IS NOT NULL
             AND office_name IS NOT NULL
@@ -967,7 +967,7 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     }
     measure: count_of_days {
       type: number
-      sql: count(distinct date(${TABLE}.welcome_time));;
+      sql: count(distinct date(CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',${TABLE}.welcome_time)));;
       hidden: yes
     }
     dimension: p_key {
