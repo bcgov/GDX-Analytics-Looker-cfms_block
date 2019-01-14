@@ -968,7 +968,6 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
     measure: count_of_days {
       type: number
       sql: count(distinct date(CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',${TABLE}.welcome_time)));;
-      hidden: yes
     }
     dimension: p_key {
       primary_key: yes
