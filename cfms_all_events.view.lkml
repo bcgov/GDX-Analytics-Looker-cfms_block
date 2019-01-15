@@ -18,7 +18,8 @@ view: cfms_all_events {
       parent_id,
       program_name,
       transaction_name,
-      COALESCE(count,quantity) AS quantity,
+      count,
+      quantity,
       COALESCE(fi.inaccurate_time,fi1.inaccurate_time) AS inaccurate_time
       FROM atomic.events AS ev
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
