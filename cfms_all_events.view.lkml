@@ -6,6 +6,7 @@ view: cfms_all_events {
       SELECT
       name_tracker AS namespace,
       event_name,
+      event_version,
       -- CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS
       derived_tstamp AS event_time,
       client_id,
@@ -17,8 +18,8 @@ view: cfms_all_events {
       parent_id,
       program_name,
       transaction_name,
-      count,
-      inaccurate_time
+      COALESCE(count,quantity) AS quantity,
+      COALESCE(fi.inaccurate_time,fi1.inaccurate_time) AS inaccurate_time
       FROM atomic.events AS ev
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
       ON ev.event_id = a.root_id
@@ -28,7 +29,9 @@ view: cfms_all_events {
       ON ev.event_id = o.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_3 AS cs
       ON ev.event_id = cs.root_id
-      LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi
+      LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_1 AS fi1
+      ON ev.event_id = fi1.root_id
+      LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_2 AS fi
       ON ev.event_id = fi.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
       ON ev.event_id = ho.root_id
@@ -36,8 +39,6 @@ view: cfms_all_events {
       ORDER BY event_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
-      persist_for: "1 hour"
-      distribution_style: all
     }
 
     dimension: namespace {
@@ -48,14 +49,18 @@ view: cfms_all_events {
       type: string
       sql: ${TABLE}.event_name ;;
     }
+    dimension: event_version {
+      type: string
+      sql: ${TABLE}.event_version ;;
+    }
     dimension: event_time {
       type: date_time
       sql: ${TABLE}.event_time ;;
     }
-  dimension: event_date {
-    type: date
-    sql: ${TABLE}.event_time ;;
-  }
+    dimension: event_date {
+      type: date
+      sql: ${TABLE}.event_time ;;
+    }
 
     dimension: client_id {
       type: number
