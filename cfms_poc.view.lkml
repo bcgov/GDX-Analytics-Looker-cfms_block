@@ -1121,6 +1121,11 @@ AND  ( (holdparity IS NULL OR holdparity = 0) AND invite_time IS NOT NULL AND st
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
     }
+    dimension: office_filter{
+      type: string
+      sql: TRANSLATE(${TABLE}.office_name, ' ', '_') ;; #-- translate location names to use "_" instead of " " for filtering
+      group_label: "Office Info"
+    }
     dimension: office_size {
       type:  string
       sql:  ${TABLE}.office_size ;;
