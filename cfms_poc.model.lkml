@@ -17,6 +17,9 @@ explore: cfms_poc {
     user_attribute: office_name
   }
 }
+explore: cfms_poc_no_filter {
+  from: cfms_poc
+}
 
 
 # See: https://docs.looker.com/reference/explore-params/access_filter
