@@ -23,12 +23,7 @@ explore: cfms_poc_no_filter {
 
 
 # See: https://docs.looker.com/reference/explore-params/access_filter
-explore: cfms_dev {
-  access_filter: {
-    field: office_filter # use the version of office names that have "_" instead of " "
-    user_attribute: office_name
-  }
-}
+explore: cfms_dev {}
 
 
 explore: cats {}
