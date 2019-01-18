@@ -98,12 +98,15 @@ view: cfms_dev {
         client_id,
         service_count,
         transactions_count,
-        CASE WHEN (event_name IN ('finish','finishstopped')) THEN 'Finished'
+        inaccurate_time,
+        CASE
+          WHEN (inaccurate_time) THEN 'Inaccurate Time'
+          WHEN (event_name IN ('finish','finishstopped')) THEN 'Finished'
           ELSE 'Customer Left (' || leave_status || ')' END AS finish_type,
         ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS finish_info_ranked
       FROM step1
       WHERE event_name IN ('finish','finishstopped','customerleft')
-      GROUP BY namespace, client_id, service_count,finish_type,transactions_count
+      GROUP BY namespace, client_id, service_count,finish_type,transactions_count,inaccurate_time
     ),
     finish_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
       SELECT
@@ -118,43 +121,83 @@ view: cfms_dev {
         service_count,
         namespace,
         min(event_time) AS welcome_time,
+        max(event_time) AS latest_time,
         SUM( CASE WHEN (event_name IN ('addtoqueue', 'servecitizen') OR ( event_name = 'customerleft' AND leave_status = 'service-creation')) THEN event_time_number ELSE 0 END)
           - SUM( CASE WHEN (event_name IN ('addcitizen')) THEN event_time_number ELSE 0 END) AS service_creation_duration,
-        SUM( CASE WHEN (event_name IN ('addtoqueue', 'servecitizen') OR ( event_name = 'customerleft' AND leave_status = 'service-creation')) THEN 1 ELSE 0 END)
-          - SUM( CASE WHEN (event_name IN ('addcitizen')) THEN 1 ELSE 0 END) AS service_creation_parity,
+        SUM( CASE WHEN (event_name IN ('addtoqueue', 'servecitizen') OR ( event_name = 'customerleft' AND leave_status = 'service-creation')) THEN 1 ELSE 0 END) AS service_creation_out,
+        SUM( CASE WHEN (event_name IN ('addcitizen')) THEN 1 ELSE 0 END) AS service_creation_in,
 
         SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite', 'returnfromlist') ) THEN event_time_number ELSE 0 END)
           - SUM( CASE WHEN (event_name IN ('addtoqueue', 'returntoqueue', 'queuefromprep')) THEN event_time_number ELSE 0 END) AS waiting_duration,
-        SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite', 'returnfromlist') ) THEN 1 ELSE 0 END)
-          - SUM( CASE WHEN (event_name IN ('addtoqueue', 'returntoqueue', 'queuefromprep')) THEN 1 ELSE 0 END) AS waiting_parity,
+        SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite', 'returnfromlist') ) THEN 1 ELSE 0 END) AS waiting_out,
+        SUM( CASE WHEN (event_name IN ('addtoqueue', 'returntoqueue', 'queuefromprep')) THEN 1 ELSE 0 END) AS waiting_in,
 
         SUM( CASE WHEN (event_name IN ('beginservice', 'queuefromprep') OR ( event_name = 'customerleft' AND leave_status = 'at-prep') ) THEN event_time_number ELSE 0 END)
           - SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite','returnfromlist') ) THEN event_time_number ELSE 0 END) AS prep_duration,
-        SUM( CASE WHEN (event_name IN ('beginservice', 'queuefromprep') OR ( event_name = 'customerleft' AND leave_status = 'at-prep') ) THEN 1 ELSE 0 END)
-          - SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite','returnfromlist') ) THEN 1 ELSE 0 END) AS prep_parity,
+        SUM( CASE WHEN (event_name IN ('beginservice', 'queuefromprep') OR ( event_name = 'customerleft' AND leave_status = 'at-prep') ) THEN 1 ELSE 0 END) AS prep_out,
+        SUM( CASE WHEN (event_name IN ('invitecitizen', 'invitefromlist', 'returninvite','returnfromlist') ) THEN 1 ELSE 0 END) AS prep_in,
 
         SUM( CASE WHEN (event_name IN ('returntoqueue', 'hold', 'stopservice', 'finish') OR ( event_name = 'customerleft' AND leave_status = 'being-served') ) THEN event_time_number ELSE 0 END)
           - SUM( CASE WHEN (event_name IN ('additionalservice', 'beginservice', 'servecitizen', 'invitefromhold', 'restartservice') ) THEN event_time_number ELSE 0 END) AS serve_duration,
-        SUM( CASE WHEN (event_name IN ('returntoqueue', 'hold', 'stopservice', 'finish') OR ( event_name = 'customerleft' AND leave_status = 'being-served') ) THEN 1 ELSE 0 END)
-          - SUM( CASE WHEN (event_name IN ('additionalservice', 'beginservice', 'servecitizen', 'invitefromhold', 'restartservice') ) THEN 1 ELSE 0 END) AS serve_parity,
+        SUM( CASE WHEN (event_name IN ('returntoqueue', 'hold', 'stopservice', 'finish') OR ( event_name = 'customerleft' AND leave_status = 'being-served') ) THEN 1 ELSE 0 END) AS serve_out,
+        SUM( CASE WHEN (event_name IN ('additionalservice', 'beginservice', 'servecitizen', 'invitefromhold', 'restartservice') ) THEN 1 ELSE 0 END) AS serve_in,
 
         SUM( CASE WHEN (event_name IN ('invitefromhold') ) THEN event_time_number ELSE 0 END)
           - SUM( CASE WHEN (event_name IN ('hold') ) THEN event_time_number ELSE 0 END) AS hold_duration,
-        SUM( CASE WHEN (event_name IN ('invitefromhold') ) THEN 1 ELSE 0 END)
-          - SUM( CASE WHEN (event_name IN ('hold') ) THEN 1 ELSE 0 END) AS hold_parity
+        SUM( CASE WHEN (event_name IN ('invitefromhold') ) THEN 1 ELSE 0 END) AS hold_out,
+        SUM( CASE WHEN (event_name IN ('hold') ) THEN 1 ELSE 0 END) AS hold_in
 
       FROM step1
       GROUP BY
         client_id,
         service_count,
         namespace
+    ),
+    visit_list AS (
+      SELECT
+        base_calculations.client_id,
+        base_calculations.service_count,
+        base_calculations.namespace,
+        welcome_time,
+        latest_time,
+        CASE WHEN (service_creation_in = service_creation_out AND service_creation_in > 0) THEN service_creation_duration ELSE NULL END AS service_creation_duration,
+        CASE WHEN (waiting_in = waiting_out AND waiting_in > 0) THEN waiting_duration ELSE NULL END AS waiting_duration,
+        CASE WHEN (prep_in = prep_out AND prep_in > 0) THEN prep_duration ELSE NULL END AS prep_duration,
+        CASE WHEN (NOT (inaccurate_time = True) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
+        CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
+        CASE
+          WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
+          WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Lin'
+          WHEN prep_in = prep_out + 1 THEN 'At Prep'
+          WHEN serve_in = serve_out + 1 THEN 'Being Served'
+          WHEN hold_in = hold_out + 1 THEN 'On Hold'
+          WHEN (service_creation_in - service_creation_out) + (waiting_in - waiting_out) + (prep_in - prep_out) + (serve_in - serve_out) + (hold_in - hold_out) <> 0 THEN 'missing_calls'
+          ELSE 'complete'
+        END AS visit_status
+      FROM base_calculations
+      LEFT JOIN finish_info ON finish_info.inaccurate_time = TRUE AND finish_info.client_id = base_calculations.client_id AND finish_info.service_count = base_calculations.service_count AND finish_info.namespace = base_calculations.namespace
     )
 
 
 
-    SELECT visit_list.*,
+    SELECT visit_list.client_id,
+            visit_list.service_count,
+            visit_list.namespace,
+            visit_list.welcome_time,
+            visit_list.latest_time,
+
+            visit_list.service_creation_duration,
+            visit_list.waiting_duration,
+            visit_list.prep_duration,
+            visit_list.serve_duration,
+            visit_list.hold_duration,
+
             transactions_count,
-            finish_type,
+            inaccurate_time,
+            CASE
+              WHEN (visit_status = 'complete') THEN finish_type
+              ELSE visit_status
+            END AS visit_status,
             agent_info.agent_id,
             office_id,
             office_type,
@@ -237,7 +280,8 @@ view: cfms_dev {
                 ELSE to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:30-HH24:59')
             END AS half_hour_bucket,
             to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:MI:SS') AS date_time_of_day
-          FROM base_calculations AS visit_list
+          FROM visit_list
+
           LEFT JOIN service_info ON service_info.client_id = visit_list.client_id AND service_info.service_count = visit_list.service_count AND service_info.namespace = visit_list.namespace
           LEFT JOIN agent_info ON agent_info.client_id = visit_list.client_id AND agent_info.service_count = visit_list.service_count AND agent_info.namespace = visit_list.namespace
           LEFT JOIN finish_info ON finish_info.client_id = visit_list.client_id AND finish_info.service_count = visit_list.service_count AND finish_info.namespace = visit_list.namespace
@@ -248,19 +292,18 @@ view: cfms_dev {
             visit_list.service_count,
             office_id,
             visit_list.welcome_time,
+            visit_list.latest_time,
             transactions_count,
+            inaccurate_time,
+            visit_status,
             finish_type,
             agent_info.agent_id,
             visit_list.service_creation_duration,
-            visit_list.service_creation_parity,
             visit_list.serve_duration,
-            visit_list.serve_parity,
             visit_list.waiting_duration,
-            visit_list.waiting_parity,
             visit_list.prep_duration,
-            visit_list.prep_parity,
             visit_list.hold_duration,
-            visit_list.hold_parity,
+            visit_status,
             office_name,
             office_size,
             area_number,
@@ -378,10 +421,10 @@ view: cfms_dev {
     }
 
 
-    dimension: finish_type {
+    dimension: visit_status {
       description: "Whether the client finished successfully, left, or their ticket is still open."
       type:  string
-      sql: COALESCE(${TABLE}.finish_type, 'Open Ticket');;
+      sql: COALESCE(${TABLE}.visit_status, 'Open Ticket');;
     }
     # Time based measures
     measure: service_creation_duration_total {
@@ -837,6 +880,12 @@ view: cfms_dev {
       sql: ${TABLE}.welcome_time ;;
       group_label: "Timing Points"
     }
+    dimension: latest_time {
+      description: "Time of the latest interaction for this service."
+      type: date_time
+      sql: ${TABLE}.latest_time ;;
+      group_label: "Timing Points"
+    }
     measure: count_of_days {
       type: number
       sql: count(distinct date(CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',${TABLE}.welcome_time)));;
@@ -937,41 +986,41 @@ view: cfms_dev {
       sql:  ${TABLE}.lastdayofpsapayperiod ;;
       group_label: "Date"
     }
-    dimension: stand_time {
-      type: date_time
-      sql: ${TABLE}.stand_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: invite_time {
-      type: date_time
-      sql: ${TABLE}.invite_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: start_time {
-      type: date_time
-      sql: ${TABLE}.start_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: chooseservice_time {
-      type: date_time
-      sql:  ${TABLE}.chooseservice_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: finish_time {
-      type: date_time
-      sql: ${TABLE}.finish_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: hold_time {
-      type: date_time
-      sql: ${TABLE}.hold_time ;;
-      group_label: "Timing Points"
-    }
-    dimension: invitefromhold_time {
-      type: date_time
-      sql: ${TABLE}.invitefromhold_time ;;
-      group_label: "Timing Points"
-    }
+#    dimension: stand_time {
+#      type: date_time
+#      sql: ${TABLE}.stand_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: invite_time {
+#      type: date_time
+#      sql: ${TABLE}.invite_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: start_time {
+#      type: date_time
+#      sql: ${TABLE}.start_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: chooseservice_time {
+#      type: date_time
+#      sql:  ${TABLE}.chooseservice_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: finish_time {
+#      type: date_time
+#      sql: ${TABLE}.finish_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: hold_time {
+#      type: date_time
+#      sql: ${TABLE}.hold_time ;;
+#      group_label: "Timing Points"
+#    }
+#    dimension: invitefromhold_time {
+#      type: date_time
+#      sql: ${TABLE}.invitefromhold_time ;;
+#      group_label: "Timing Points"
+#    }
     dimension: client_id {
       type: number
       sql: ${TABLE}.client_id ;;
