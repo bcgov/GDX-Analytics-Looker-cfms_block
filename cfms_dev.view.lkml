@@ -171,10 +171,10 @@ view: cfms_dev {
               THEN 'Back Office'
               ELSE 'Front Office'
               END as back_office,
-            SUM(c2.waiting_duration) AS waiting_duration_total,
-            SUM(c2.prep_duration) AS prep_duration_total,
-            SUM(c2.hold_duration) AS hold_duration_total,
-            SUM(c2.serve_duration) AS serve_duration_total,
+            SUM(waiting_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS waiting_duration_total,
+            SUM(prep_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS prep_duration_total,
+            SUM(hold_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS hold_duration_total,
+            SUM(serve_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS serve_duration_total,
             -----------------------------------
             -- Calculating zscores so we can filter out outliers
             -- To calculate the zscore, we use the formula (value - mean) / std_dev
@@ -238,8 +238,6 @@ view: cfms_dev {
             END AS half_hour_bucket,
             to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:MI:SS') AS date_time_of_day
           FROM base_calculations AS visit_list
-          LEFT JOIN base_calculations AS c2 ON c2.client_id = visit_list.client_id and c2.namespace = visit_list.namespace
-
           LEFT JOIN service_info ON service_info.client_id = visit_list.client_id AND service_info.service_count = visit_list.service_count AND service_info.namespace = visit_list.namespace
           LEFT JOIN agent_info ON agent_info.client_id = visit_list.client_id AND agent_info.service_count = visit_list.service_count AND agent_info.namespace = visit_list.namespace
           LEFT JOIN finish_info ON finish_info.client_id = visit_list.client_id AND finish_info.service_count = visit_list.service_count AND finish_info.namespace = visit_list.namespace
