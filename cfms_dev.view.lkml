@@ -202,6 +202,11 @@ view: cfms_dev {
             office_id,
             office_type,
             channel,
+            program_id,
+            program_name,
+            parent_id,
+            transaction_name,
+
             -----------------------------------
             -- A sort field on Channel, so that "in-person" shows first in the sort order
             CASE WHEN channel = 'in-person'
@@ -421,11 +426,6 @@ view: cfms_dev {
     }
 
 
-    dimension: visit_status {
-      description: "Whether the client finished successfully, left, or their ticket is still open."
-      type:  string
-      sql: COALESCE(${TABLE}.visit_status, 'Open Ticket');;
-    }
     # Time based measures
     measure: service_creation_duration_total {
       description: "Total service_creation duration."
@@ -1239,10 +1239,10 @@ view: cfms_dev {
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
     }
-    dimension: missing_calls {
-      description: "A flag to indicate that there are missing timing points for this service is unreliable. It will be included in counts, but not timing averages."
-      type: yesno
-      sql: ${TABLE}.missing_calls ;;
+    dimension: visit_status {
+      description: "Whether the client finished successfully, left, or their ticket is still open."
+      type:  string
+      sql: COALESCE(${TABLE}.visit_status, 'Open Ticket');;
     }
 
     # flexible_filter_date_range provides the necessary filter for Explores of current_period and last_period
