@@ -163,7 +163,7 @@ view: cfms_dev {
         CASE WHEN (service_creation_in = service_creation_out AND service_creation_in > 0) THEN service_creation_duration ELSE NULL END AS service_creation_duration,
         CASE WHEN (waiting_in = waiting_out AND waiting_in > 0) THEN waiting_duration ELSE NULL END AS waiting_duration,
         CASE WHEN (prep_in = prep_out AND prep_in > 0) THEN prep_duration ELSE NULL END AS prep_duration,
-        CASE WHEN (NOT (inaccurate_time = True) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
+        CASE WHEN ((inaccurate_time IS NULL OR inaccurate_time = FALSE) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
         CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
         CASE
           WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
