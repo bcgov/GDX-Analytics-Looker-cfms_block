@@ -167,7 +167,7 @@ view: cfms_dev {
         CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
         CASE
           WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
-          WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Lin'
+          WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Line'
           WHEN prep_in = prep_out + 1 THEN 'At Prep'
           WHEN serve_in = serve_out + 1 THEN 'Being Served'
           WHEN hold_in = hold_out + 1 THEN 'On Hold'
