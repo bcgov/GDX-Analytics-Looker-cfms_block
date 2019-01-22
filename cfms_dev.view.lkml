@@ -23,7 +23,7 @@ view: cfms_dev {
     parent_id,
     COALESCE(si.program, cs.program_name) AS program_name,
     COALESCE(si.service,cs.transaction_name) AS transaction_name,
-    COALESCE(fi.quantity,fs.quantity) AS transactions_count, -- from finish-2.0.0 or finishstopped-1.0.0
+    COALESCE(fi.quantity,fs.quantity) AS transaction_count, -- from finish-2.0.0 or finishstopped-1.0.0
     inaccurate_time, -- from finish-2.0.0
     leave_status -- from customerleft-2.0.0
 
@@ -97,7 +97,7 @@ view: cfms_dev {
         namespace,
         client_id,
         service_count,
-        transactions_count,
+        transaction_count,
         inaccurate_time,
         CASE
           WHEN (inaccurate_time) THEN 'Inaccurate Time'
@@ -106,7 +106,7 @@ view: cfms_dev {
         ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS finish_info_ranked
       FROM step1
       WHERE event_name IN ('finish','finishstopped','customerleft')
-      GROUP BY namespace, client_id, service_count,finish_type,transactions_count,inaccurate_time
+      GROUP BY namespace, client_id, service_count,finish_type,transaction_count,inaccurate_time
     ),
     finish_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
       SELECT
@@ -192,7 +192,7 @@ view: cfms_dev {
             visit_list.serve_duration,
             visit_list.hold_duration,
 
-            transactions_count,
+            transaction_count,
             inaccurate_time,
             CASE
               WHEN (visit_status = 'complete') THEN finish_type
@@ -298,7 +298,7 @@ view: cfms_dev {
             office_id,
             visit_list.welcome_time,
             visit_list.latest_time,
-            transactions_count,
+            transaction_count,
             inaccurate_time,
             visit_status,
             finish_type,
@@ -344,10 +344,10 @@ view: cfms_dev {
       type: count
       group_label: "Counts"
     }
-    measure: transactions_count {
+    measure: transaction_count {
       description: "Count of transactions. (eg. 20 property taxes for one service)"
       type: sum
-      sql:  ${TABLE}.transactions_count ;;
+      sql:  ${TABLE}.transaction_count ;;
       group_label: "Counts"
     }
 
@@ -1083,7 +1083,7 @@ view: cfms_dev {
       type: number
       sql: 1=1 ;;
       hidden: yes
-      drill_fields: [transaction_name, channel, transactions_count]
+      drill_fields: [transaction_name, channel, transaction_count]
     }
     dimension: program_name {
       type: string
@@ -1146,7 +1146,7 @@ view: cfms_dev {
         \"type\":\"looker_column\" ,
         \"hidden_fields\":[\"calculation_2\"]}' %}
 
-        {{ dummy._link }}&vis_config={{ vis_config | encode_uri }}&pivots=cfms_poc.channel&sorts=cfms_poc.channel 0,cfms_poc.transactions_count desc 6&limit=1000&column_limit=50&row_total=right&filter_config={{ filter_config| encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"
+        {{ dummy._link }}&vis_config={{ vis_config | encode_uri }}&pivots=cfms_poc.channel&sorts=cfms_poc.channel 0,cfms_poc.transaction_count desc 6&limit=1000&column_limit=50&row_total=right&filter_config={{ filter_config| encode_uri }}&dynamic_fields={{ table_calc | replace: '  ', '' | encode_uri }}"
       }
     }
     measure: dummy_service_count {
