@@ -16,13 +16,14 @@ view: cats {
           SPLIT_PART(SPLIT_PART(REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*'), '=',2), '&', 1) AS search,
           -- REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
           refer,
-          COALESCE (sbc.city,servicebc.cats_info.city) as office_name,
+          office AS office_name,
+          client,
           gdx_id,
           ip AS gdx_ip,
           source_translated_ip,
-          source_host_name,
-          source_mac_address,
-          sbc.source_host_name AS asset_tag,
+          --source_host_name,
+          --source_mac_address,
+          --sbc.source_host_name AS asset_tag,
           flex_string,
           dd.isweekend::BOOLEAN,
           dd.isholiday::BOOLEAN,
@@ -38,9 +39,9 @@ view: cats {
           office_info.id AS office_id
           FROM servicebc.cats_gdx AS gdx
           LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate, sbc.firewall_time)) < 30
-          -- Use sbc.city where it exists. If it is NULL, the try looking up the site based on the asset tag
-          LEFT JOIN servicebc.cats_info ON servicebc.cats_info.asset_tag = sbc.source_host_name AND sbc.source_host_name <> ''
-          LEFT JOIN servicebc.office_info ON (servicebc.office_info.site = sbc.city OR (sbc.city IS NULL AND servicebc.office_info.site = servicebc.cats_info.city)) AND end_date IS NULL -- for now, get the most recent office info
+          -- Use sbc.office where it exists. If it is NULL, the try looking up the site based on the asset tag
+          --LEFT JOIN servicebc.cats_info ON servicebc.cats_info.asset_tag = sbc.source_host_name AND sbc.source_host_name <> ''
+          LEFT JOIN servicebc.office_info ON servicebc.office_info.site = sbc.office AND end_date IS NULL -- for now, get the most recent office info
           JOIN servicebc.datedimension AS dd on govdate::date = dd.datekey::date
           LEFT JOIN cmslite.metadata AS cms ON cms.hr_url = 'https://www2.gov.bc.ca' || SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)
           LEFT JOIN cmslite.metadata AS cms_guid ON
@@ -151,14 +152,14 @@ view: cats {
       sql: ${TABLE}.flex_string;;
     }
 
-  dimension: asset_tag {
-    type: string
-    sql: ${TABLE}.asset_tag;;
-  }
-  dimension: source_mac_address {
-    type: string
-    sql: ${TABLE}.source_mac_address;;
-  }
+    dimension: asset_tag {
+      type: string
+      sql: ${TABLE}.asset_tag;;
+    }
+    #dimension: source_mac_address {
+    #  type: string
+    #  sql: ${TABLE}.source_mac_address;;
+    #}
 
     dimension: time {
       type: string
@@ -270,6 +271,11 @@ view: cats {
       sql:  ${TABLE}.office_name ;;
       group_label: "Office Info"
       drill_fields: [office_name]
+    }
+    dimension: office_owner {
+      type:  string
+      sql:  ${TABLE}.client ;;
+      group_label: "Office Info"
     }
     dimension: office_size {
       type:  string
