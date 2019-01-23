@@ -10,7 +10,6 @@ view: cfms_dev {
     SELECT
     ev.name_tracker AS namespace,
     ev.event_name,
-    -- CONVERT_TIMEZONE('UTC', 'US/Pacific', ev.derived_tstamp) AS
     ev.dvce_created_tstamp AS event_time,
     DATEDIFF(milliseconds, current_date, event_time)/1000.0 AS event_time_number,
     client_id,
@@ -153,7 +152,7 @@ view: cfms_dev {
         service_count,
         namespace
     ),
-    visit_list AS (
+    item_list AS (
       SELECT
         base_calculations.client_id,
         base_calculations.service_count,
@@ -165,6 +164,20 @@ view: cfms_dev {
         CASE WHEN (prep_in = prep_out AND prep_in > 0) THEN prep_duration ELSE NULL END AS prep_duration,
         CASE WHEN ((inaccurate_time IS NULL OR inaccurate_time = FALSE) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
         CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
+        --- Set flags for states
+        CASE WHEN service_creation_in = service_creation_out + 1 THEN TRUE END AS service_creation_flag,
+        CASE WHEN waiting_in = waiting_out + 1 THEN TRUE END AS waiting_flag,
+        CASE WHEN prep_in = prep_out + 1 THEN TRUE END AS prep_flag,
+        CASE WHEN serve_in = serve_out + 1 THEN TRUE END AS serve_flag,
+        CASE WHEN hold_in = hold_out + 1 THEN TRUE END AS hold_flag,
+        CASE WHEN -- to calculate missing flags, we look for cases where the discrepancy is greater than you could see by still being a stage
+          (service_creation_in - service_creation_out) NOT in (0, -1)
+          AND (waiting_in - waiting_out) NOT in (0, -1)
+          AND (prep_in - prep_out) NOT in (0, -1)
+          AND (serve_in - serve_out) NOT in (0, -1)
+          AND (hold_in - hold_out) NOT in (0, -1)
+        THEN TRUE END AS missing_calls_flag,
+        inaccurate_time,
         CASE
           WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
           WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Line'
@@ -173,31 +186,50 @@ view: cfms_dev {
           WHEN hold_in = hold_out + 1 THEN 'On Hold'
           WHEN (service_creation_in - service_creation_out) + (waiting_in - waiting_out) + (prep_in - prep_out) + (serve_in - serve_out) + (hold_in - hold_out) <> 0 THEN 'missing_calls'
           ELSE 'complete'
-        END AS visit_status
+        END AS status
       FROM base_calculations
       LEFT JOIN finish_info ON finish_info.inaccurate_time = TRUE AND finish_info.client_id = base_calculations.client_id AND finish_info.service_count = base_calculations.service_count AND finish_info.namespace = base_calculations.namespace
+    ),
+    flags AS (
+      SELECT
+        client_id,
+        namespace,
+        BOOL_OR(service_creation_flag) AS service_creation_flag_visit,
+        BOOL_OR(waiting_flag) AS waiting_flag_visit,
+        BOOL_OR(prep_flag) AS prep_flag_visit,
+        BOOL_OR(serve_flag) AS serve_flag_visit,
+        BOOL_OR(hold_flag) AS hold_flag_visit,
+        BOOL_OR(inaccurate_time) AS inaccurate_time_visit,
+        BOOL_OR(missing_calls_flag) AS missing_calls_flag_visit
+      FROM item_list
+      GROUP BY client_id, namespace
     )
 
 
+    SELECT item_list.client_id,
+            item_list.service_count,
+            item_list.namespace,
+            item_list.welcome_time,
+            item_list.latest_time,
 
-    SELECT visit_list.client_id,
-            visit_list.service_count,
-            visit_list.namespace,
-            visit_list.welcome_time,
-            visit_list.latest_time,
-
-            visit_list.service_creation_duration,
-            visit_list.waiting_duration,
-            visit_list.prep_duration,
-            visit_list.serve_duration,
-            visit_list.hold_duration,
+            item_list.service_creation_duration,
+            item_list.waiting_duration,
+            item_list.prep_duration,
+            item_list.serve_duration,
+            item_list.hold_duration,
 
             transaction_count,
-            inaccurate_time,
+            item_list.inaccurate_time,
             CASE
-              WHEN (visit_status = 'complete') THEN finish_type
-              ELSE visit_status
-            END AS visit_status,
+              WHEN (status = 'complete') THEN finish_type
+              ELSE status
+            END AS status,
+service_creation_flag,
+waiting_flag,
+prep_flag,
+serve_flag,
+hold_flag,
+missing_calls_flag,
             agent_info.agent_id,
             office_id,
             office_type,
@@ -219,10 +251,18 @@ view: cfms_dev {
               THEN 'Back Office'
               ELSE 'Front Office'
               END as back_office,
-            SUM(waiting_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS waiting_duration_total,
-            SUM(prep_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS prep_duration_total,
-            SUM(hold_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS hold_duration_total,
-            SUM(serve_duration) OVER (PARTITION BY visit_list.client_id, visit_list.namespace) AS serve_duration_total,
+            CASE WHEN missing_calls_flag_visit = TRUE OR waiting_flag_visit = TRUE THEN NULL
+              ELSE SUM(waiting_duration) OVER (PARTITION BY item_list.client_id, item_list.namespace)
+            END AS waiting_duration_total,
+            CASE WHEN missing_calls_flag_visit = TRUE OR prep_flag_visit = TRUE THEN NULL
+              ELSE SUM(prep_duration) OVER (PARTITION BY item_list.client_id, item_list.namespace)
+            END AS prep_duration_total,
+            CASE WHEN missing_calls_flag_visit = TRUE OR hold_flag_visit = TRUE THEN NULL
+              ELSE SUM(hold_duration) OVER (PARTITION BY item_list.client_id, item_list.namespace)
+            END AS hold_duration_total,
+            CASE WHEN missing_calls_flag_visit = TRUE OR serve_flag_visit = TRUE OR inaccurate_time_visit = TRUE THEN NULL
+              ELSE SUM(serve_duration) OVER (PARTITION BY item_list.client_id, item_list.namespace)
+            END AS serve_duration_total,
             -----------------------------------
             -- Calculating zscores so we can filter out outliers
             -- To calculate the zscore, we use the formula (value - mean) / std_dev
@@ -235,35 +275,35 @@ view: cfms_dev {
             ---
             -- This example shows how to set it for both office_id and program_id.
             -- For now we just use office_id as we don't have a big enough data set yet
-            --CASE WHEN (stddev(visit_list.service_creation) over (PARTITION BY office_id, visit_list.program_id)) <> 0
-            --    THEN (visit_list.service_creation - avg(visit_list.service_creation) over (PARTITION BY office_id, visit_list.program_id))
-            --              / (stddev(visit_list.service_creation) over (PARTITION BY office_id, visit_list.program_id))
+            --CASE WHEN (stddev(item_list.service_creation) over (PARTITION BY office_id, item_list.program_id)) <> 0
+            --    THEN (item_list.service_creation - avg(item_list.service_creation) over (PARTITION BY office_id, item_list.program_id))
+            --              / (stddev(item_list.service_creation) over (PARTITION BY office_id, item_list.program_id))
             --    ELSE NULL
             --END AS service_creation_zscore,
             -----------------------------------
-            CASE WHEN (stddev(visit_list.service_creation_duration) over (PARTITION BY office_id)) <> 0
-                THEN (visit_list.service_creation_duration - avg(visit_list.service_creation_duration) over (PARTITION BY office_id))
-                   / (stddev(visit_list.service_creation_duration) over (PARTITION BY office_id))
+            CASE WHEN (stddev(item_list.service_creation_duration) over (PARTITION BY office_id)) <> 0
+                THEN (item_list.service_creation_duration - avg(item_list.service_creation_duration) over (PARTITION BY office_id))
+                   / (stddev(item_list.service_creation_duration) over (PARTITION BY office_id))
                 ELSE NULL
             END AS service_creation_zscore,
-            CASE WHEN (stddev(visit_list.waiting_duration) over (PARTITION BY office_id)) <> 0
-                THEN (visit_list.waiting_duration - avg(visit_list.waiting_duration) over (PARTITION BY office_id))
-                   / (stddev(visit_list.waiting_duration) over (PARTITION BY office_id))
+            CASE WHEN (stddev(item_list.waiting_duration) over (PARTITION BY office_id)) <> 0
+                THEN (item_list.waiting_duration - avg(item_list.waiting_duration) over (PARTITION BY office_id))
+                   / (stddev(item_list.waiting_duration) over (PARTITION BY office_id))
                 ELSE NULL
             END AS waiting_duration_zscore,
-            CASE WHEN (stddev(visit_list.prep_duration) over (PARTITION BY office_id)) <> 0
-                THEN (visit_list.prep_duration - avg(visit_list.prep_duration) over (PARTITION BY office_id))
-                   / (stddev(visit_list.prep_duration) over (PARTITION BY office_id))
+            CASE WHEN (stddev(item_list.prep_duration) over (PARTITION BY office_id)) <> 0
+                THEN (item_list.prep_duration - avg(item_list.prep_duration) over (PARTITION BY office_id))
+                   / (stddev(item_list.prep_duration) over (PARTITION BY office_id))
                 ELSE NULL
             END AS prep_duration_zscore,
-            CASE WHEN (stddev(visit_list.hold_duration) over (PARTITION BY office_id)) <> 0
-                THEN (visit_list.hold_duration - avg(visit_list.hold_duration) over (PARTITION BY office_id))
-                   / (stddev(visit_list.hold_duration) over (PARTITION BY office_id))
+            CASE WHEN (stddev(item_list.hold_duration) over (PARTITION BY office_id)) <> 0
+                THEN (item_list.hold_duration - avg(item_list.hold_duration) over (PARTITION BY office_id))
+                   / (stddev(item_list.hold_duration) over (PARTITION BY office_id))
                 ELSE NULL
             END AS hold_duration_zscore,
-            CASE WHEN (stddev(visit_list.serve_duration) over (PARTITION BY office_id)) <> 0
-                THEN (visit_list.serve_duration - avg(visit_list.serve_duration) over (PARTITION BY office_id))
-                   / (stddev(visit_list.serve_duration) over (PARTITION BY office_id))
+            CASE WHEN (stddev(item_list.serve_duration) over (PARTITION BY office_id)) <> 0
+                THEN (item_list.serve_duration - avg(item_list.serve_duration) over (PARTITION BY office_id))
+                   / (stddev(item_list.serve_duration) over (PARTITION BY office_id))
                 ELSE NULL
             END AS serve_duration_zscore,
             -- End zscore calculations
@@ -279,36 +319,50 @@ view: cfms_dev {
             -- NOTE: We need to do an explicit timezone conversion here as we are casting ot a CHAR
             -- in other places the underlying UTC is converterd to Pacific time by Looker. It can't
             -- do it here as the data it will see below is a string, not a data
-            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:00-HH24:59') AS hourly_bucket,
-            CASE WHEN date_part(minute, CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time)) < 30
-                THEN to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:00-HH24:29')
-                ELSE to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:30-HH24:59')
+            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', item_list.welcome_time), 'HH24:00-HH24:59') AS hourly_bucket,
+            CASE WHEN date_part(minute, CONVERT_TIMEZONE('UTC', 'US/Pacific', item_list.welcome_time)) < 30
+                THEN to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', item_list.welcome_time), 'HH24:00-HH24:29')
+                ELSE to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', item_list.welcome_time), 'HH24:30-HH24:59')
             END AS half_hour_bucket,
-            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', visit_list.welcome_time), 'HH24:MI:SS') AS date_time_of_day
-          FROM visit_list
+            to_char(CONVERT_TIMEZONE('UTC', 'US/Pacific', item_list.welcome_time), 'HH24:MI:SS') AS date_time_of_day
+          FROM item_list
 
-          LEFT JOIN service_info ON service_info.client_id = visit_list.client_id AND service_info.service_count = visit_list.service_count AND service_info.namespace = visit_list.namespace
-          LEFT JOIN agent_info ON agent_info.client_id = visit_list.client_id AND agent_info.service_count = visit_list.service_count AND agent_info.namespace = visit_list.namespace
-          LEFT JOIN finish_info ON finish_info.client_id = visit_list.client_id AND finish_info.service_count = visit_list.service_count AND finish_info.namespace = visit_list.namespace
+          LEFT JOIN service_info ON service_info.client_id = item_list.client_id AND service_info.service_count = item_list.service_count AND service_info.namespace = item_list.namespace
+          LEFT JOIN agent_info ON agent_info.client_id = item_list.client_id AND agent_info.service_count = item_list.service_count AND agent_info.namespace = item_list.namespace
+          LEFT JOIN finish_info ON finish_info.client_id = item_list.client_id AND finish_info.service_count = item_list.service_count AND finish_info.namespace = item_list.namespace
+          LEFT JOIN flags ON flags.client_id = item_list.client_id AND flags.namespace = item_list.namespace
           LEFT JOIN servicebc.office_info ON servicebc.office_info.rmsofficecode = office_id AND end_date IS NULL -- for now, get the most recent office info
-          JOIN servicebc.datedimension AS dd on CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',visit_list.welcome_time)::date = dd.datekey::date
-          GROUP BY visit_list.namespace,
-            visit_list.client_id,
-            visit_list.service_count,
+          JOIN servicebc.datedimension AS dd on CONVERT_TIMEZONE('UTC', 'America/Los_Angeles',item_list.welcome_time)::date = dd.datekey::date
+          GROUP BY item_list.namespace,
+            item_list.client_id,
+            item_list.service_count,
             office_id,
-            visit_list.welcome_time,
-            visit_list.latest_time,
+            item_list.welcome_time,
+            item_list.latest_time,
             transaction_count,
-            inaccurate_time,
-            visit_status,
+            item_list.inaccurate_time,
+            status,
             finish_type,
             agent_info.agent_id,
-            visit_list.service_creation_duration,
-            visit_list.serve_duration,
-            visit_list.waiting_duration,
-            visit_list.prep_duration,
-            visit_list.hold_duration,
-            visit_status,
+            item_list.service_creation_duration,
+            item_list.serve_duration,
+            item_list.waiting_duration,
+            item_list.prep_duration,
+            item_list.hold_duration,
+service_creation_flag,
+waiting_flag,
+prep_flag,
+serve_flag,
+hold_flag,
+missing_calls_flag,
+service_creation_flag_visit,
+waiting_flag_visit,
+prep_flag_visit,
+serve_flag_visit,
+hold_flag_visit,
+inaccurate_time_visit,
+missing_calls_flag_visit,
+            status,
             office_name,
             office_size,
             area_number,
@@ -326,6 +380,38 @@ view: cfms_dev {
           # https://docs.looker.com/data-modeling/learning-lookml/caching
     #persist_for: "1 hour"
     }
+
+
+  dimension: service_creation_flag {
+    type: yesno
+    sql: ${TABLE}.service_creation_flag ;;
+    hidden: yes
+  }
+
+  dimension: waiting_flag {
+    type: yesno
+    sql: ${TABLE}.waiting_flag ;;
+    hidden: yes
+  }
+
+  dimension: prep_flag {
+    type: yesno
+    sql: ${TABLE}.prep_flag ;;
+    hidden: yes
+  }
+
+  dimension: serve_flag {
+    type: yesno
+    sql: ${TABLE}.serve_flag ;;
+    hidden: yes
+  }
+
+  dimension: hold_flag {
+    type: yesno
+    sql: ${TABLE}.hold_flag ;;
+    hidden: yes
+  }
+
 
 # Build measures and dimensions
     dimension: namespace {
@@ -1239,10 +1325,10 @@ view: cfms_dev {
       type: yesno
       sql: ${TABLE}.inaccurate_time ;;
     }
-    dimension: visit_status {
-      description: "Whether the client finished successfully, left, or their ticket is still open."
+    dimension: status {
+      description: "Whether the client's interaction finished successfully, left, or their ticket is still open."
       type:  string
-      sql: COALESCE(${TABLE}.visit_status, 'Open Ticket');;
+      sql: COALESCE(${TABLE}.status, 'Open Ticket');;
     }
 
     # flexible_filter_date_range provides the necessary filter for Explores of current_period and last_period
