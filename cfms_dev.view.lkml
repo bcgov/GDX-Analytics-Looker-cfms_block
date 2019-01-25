@@ -1,53 +1,13 @@
 view: cfms_dev {
   derived_table: {
-    sql: WITH step1 AS( -- Build a CTE containing all events using the name_tracker "CFMS_poc"
+    sql: WITH step1 AS( -- Build a CTE containing all events
           -- this will include all fields for all possible events. We will then
           -- build the individual tables from this big one below
           -- NOTE: we are ignoring instances where there is no client_id
           --
-          -- See here for info on incrementally building 'derived.cfms_step1'
-          -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/cfms
-    SELECT
-    ev.name_tracker AS namespace,
-    ev.event_name,
-    ev.dvce_created_tstamp AS event_time,
-    DATEDIFF(milliseconds, current_date, event_time)/1000.0 AS event_time_number,
-    client_id,
-    service_count,
-    office_id,
-    office_type,
-    agent_id,
-    channel,
-    program_id,
-    parent_id,
-    COALESCE(si.program, cs.program_name) AS program_name,
-    COALESCE(si.service,cs.transaction_name) AS transaction_name,
-    COALESCE(fi.quantity,fs.quantity) AS transaction_count, -- from finish-2.0.0 or finishstopped-1.0.0
-    inaccurate_time, -- from finish-2.0.0
-    leave_status -- from customerleft-2.0.0
-
-    FROM atomic.events AS ev
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
-        ON ev.event_id = a.root_id AND ev.collector_tstamp = a.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
-        ON ev.event_id = c.root_id AND ev.collector_tstamp = c.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
-        ON ev.event_id = o.root_id AND ev.collector_tstamp = o.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_chooseservice_3 AS cs
-        ON ev.event_id = cs.root_id AND ev.collector_tstamp = cs.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_finish_2 AS fi
-        ON ev.event_id = fi.root_id AND ev.collector_tstamp = fi.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_finishstopped_1 AS fs
-        ON ev.event_id = fs.root_id AND ev.collector_tstamp = fs.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
-        ON ev.event_id = ho.root_id AND ev.collector_tstamp = ho.root_tstamp
-    LEFT JOIN atomic.ca_bc_gov_cfmspoc_customerleft_2 AS cl
-        ON ev.event_id = cl .root_id AND ev.collector_tstamp = cl.root_tstamp
-    LEFT JOIN servicebc.service_info AS si ON si.svccode = cs.program_id
-
-    WHERE ev.name_tracker IN ('TheQ_dev')
-        AND c.client_id < 1000
-        AND event_time > '2019-01-14 00:00:00'
+          -- See here for info on incrementally building 'derived.theq_step1'
+          -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/theq
+     SELECT * FROM derived.theq_step1
     ),
     service_info_pre AS (
       SELECT
@@ -66,10 +26,14 @@ view: cfms_dev {
       ORDER BY event_time DESC
     ),
     service_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
-      SELECT
-        service_info_pre.*
-      FROM service_info_pre
-      WHERE service_info_ranked = 1
+      (
+        SELECT
+          service_info_pre.*
+        FROM service_info_pre
+       WHERE service_info_ranked = 1
+      ) UNION (
+        SELECT * FROM servicebc.service_info_cfmsv1
+      )
     ),
     agent_info_pre AS ( -- we set the Agent ID to be the LAST agent who worked on the case other than setting a "Customer Left" event
       SELECT
@@ -86,10 +50,14 @@ view: cfms_dev {
       ORDER BY event_time DESC
     ),
     agent_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
-      SELECT
-        agent_info_pre.*
-      FROM agent_info_pre
-      WHERE agent_info_ranked = 1
+      (
+        SELECT
+          agent_info_pre.*
+        FROM agent_info_pre
+        WHERE agent_info_ranked = 1
+      ) UNION (
+        SELECT * FROM servicebc.agent_info_cfmsv1
+      )
     ),
     finish_info_pre AS (
       SELECT
@@ -108,10 +76,15 @@ view: cfms_dev {
       GROUP BY namespace, client_id, service_count,finish_type,transaction_count,inaccurate_time
     ),
     finish_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
-      SELECT
-        finish_info_pre.*
-      FROM finish_info_pre
-      WHERE finish_info_ranked = 1
+      (
+        SELECT
+          finish_info_pre.*
+        FROM finish_info_pre
+        WHERE finish_info_ranked = 1
+      ) UNION (
+        SELECT * FROM servicebc.finish_info_cfmsv1
+      )
+
     ),
 
     base_calculations AS (
@@ -153,42 +126,46 @@ view: cfms_dev {
         namespace
     ),
     item_list AS (
-      SELECT
-        base_calculations.client_id,
-        base_calculations.service_count,
-        base_calculations.namespace,
-        welcome_time,
-        latest_time,
-        CASE WHEN (service_creation_in = service_creation_out AND service_creation_in > 0) THEN service_creation_duration ELSE NULL END AS service_creation_duration,
-        CASE WHEN (waiting_in = waiting_out AND waiting_in > 0) THEN waiting_duration ELSE NULL END AS waiting_duration,
-        CASE WHEN (prep_in = prep_out AND prep_in > 0) THEN prep_duration ELSE NULL END AS prep_duration,
-        CASE WHEN ((inaccurate_time IS NULL OR inaccurate_time = FALSE) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
-        CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
-        --- Set flags for states
-        CASE WHEN service_creation_in = service_creation_out + 1 THEN TRUE END AS service_creation_flag,
-        CASE WHEN waiting_in = waiting_out + 1 THEN TRUE END AS waiting_flag,
-        CASE WHEN prep_in = prep_out + 1 THEN TRUE END AS prep_flag,
-        CASE WHEN serve_in = serve_out + 1 THEN TRUE END AS serve_flag,
-        CASE WHEN hold_in = hold_out + 1 THEN TRUE END AS hold_flag,
-        CASE WHEN -- to calculate missing flags, we look for cases where the discrepancy is greater than you could see by still being a stage
-          (service_creation_in - service_creation_out) NOT in (0, -1)
-          AND (waiting_in - waiting_out) NOT in (0, -1)
-          AND (prep_in - prep_out) NOT in (0, -1)
-          AND (serve_in - serve_out) NOT in (0, -1)
-          AND (hold_in - hold_out) NOT in (0, -1)
-        THEN TRUE END AS missing_calls_flag,
-        inaccurate_time,
-        CASE
-          WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
-          WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Line'
-          WHEN prep_in = prep_out + 1 THEN 'At Prep'
-          WHEN serve_in = serve_out + 1 THEN 'Being Served'
-          WHEN hold_in = hold_out + 1 THEN 'On Hold'
-          WHEN (service_creation_in - service_creation_out) + (waiting_in - waiting_out) + (prep_in - prep_out) + (serve_in - serve_out) + (hold_in - hold_out) <> 0 THEN 'missing_calls'
-          ELSE 'complete'
-        END AS status
-      FROM base_calculations
-      LEFT JOIN finish_info ON finish_info.inaccurate_time = TRUE AND finish_info.client_id = base_calculations.client_id AND finish_info.service_count = base_calculations.service_count AND finish_info.namespace = base_calculations.namespace
+      (
+        SELECT
+          base_calculations.client_id,
+          base_calculations.service_count,
+          base_calculations.namespace,
+          welcome_time,
+          latest_time,
+          CASE WHEN (service_creation_in = service_creation_out AND service_creation_in > 0) THEN service_creation_duration ELSE NULL END AS service_creation_duration,
+          CASE WHEN (waiting_in = waiting_out AND waiting_in > 0) THEN waiting_duration ELSE NULL END AS waiting_duration,
+          CASE WHEN (prep_in = prep_out AND prep_in > 0) THEN prep_duration ELSE NULL END AS prep_duration,
+          CASE WHEN ((inaccurate_time IS NULL OR inaccurate_time = FALSE) AND serve_in = serve_out AND serve_in > 0) THEN serve_duration ELSE NULL END AS serve_duration,
+          CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
+          --- Set flags for states
+          CASE WHEN service_creation_in = service_creation_out + 1 THEN TRUE END AS service_creation_flag,
+          CASE WHEN waiting_in = waiting_out + 1 THEN TRUE END AS waiting_flag,
+          CASE WHEN prep_in = prep_out + 1 THEN TRUE END AS prep_flag,
+          CASE WHEN serve_in = serve_out + 1 THEN TRUE END AS serve_flag,
+          CASE WHEN hold_in = hold_out + 1 THEN TRUE END AS hold_flag,
+          CASE WHEN -- to calculate missing flags, we look for cases where the discrepancy is greater than you could see by still being a stage
+            (service_creation_in - service_creation_out) NOT in (0, -1)
+            AND (waiting_in - waiting_out) NOT in (0, -1)
+            AND (prep_in - prep_out) NOT in (0, -1)
+            AND (serve_in - serve_out) NOT in (0, -1)
+            AND (hold_in - hold_out) NOT in (0, -1)
+          THEN TRUE END AS missing_calls_flag,
+          inaccurate_time,
+          CASE
+            WHEN service_creation_in = service_creation_out + 1 THEN 'At Service Creation'
+            WHEN waiting_in = waiting_out + 1 THEN 'Waiting in Line'
+            WHEN prep_in = prep_out + 1 THEN 'At Prep'
+            WHEN serve_in = serve_out + 1 THEN 'Being Served'
+            WHEN hold_in = hold_out + 1 THEN 'On Hold'
+            WHEN (service_creation_in - service_creation_out) + (waiting_in - waiting_out) + (prep_in - prep_out) + (serve_in - serve_out) + (hold_in - hold_out) <> 0 THEN 'missing_calls'
+            ELSE 'complete'
+          END AS status
+        FROM base_calculations
+        LEFT JOIN finish_info ON finish_info.inaccurate_time = TRUE AND finish_info.client_id = base_calculations.client_id AND finish_info.service_count = base_calculations.service_count AND finish_info.namespace = base_calculations.namespace
+      ) UNION (
+        SELECT * FROM servicebc.item_list_cfmsv1
+      )
     ),
     flags AS (
       SELECT
