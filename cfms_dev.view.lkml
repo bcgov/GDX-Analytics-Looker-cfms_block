@@ -7,7 +7,8 @@ view: cfms_dev {
           --
           -- See here for info on incrementally building 'derived.theq_step1'
           -- httpss://github.com/snowplow-proservices/ca.bc.gov-snowplow-pipeline/tree/master/jobs/theq
-     SELECT * FROM derived.theq_step1
+    SELECT * FROM derived.theq_step1
+    WHERE client_id NOT IN (SELECT * from servicebc.bad_clientids )
     ),
     service_info_pre AS (
       SELECT
@@ -165,6 +166,7 @@ view: cfms_dev {
         LEFT JOIN finish_info ON finish_info.inaccurate_time = TRUE AND finish_info.client_id = base_calculations.client_id AND finish_info.service_count = base_calculations.service_count AND finish_info.namespace = base_calculations.namespace
       ) UNION (
         SELECT * FROM servicebc.item_list_cfmsv1
+          WHERE client_id NOT IN (SELECT * from servicebc.bad_clientids )
       )
     ),
     flags AS (
@@ -201,12 +203,12 @@ view: cfms_dev {
               WHEN (status = 'complete') THEN finish_type
               ELSE status
             END AS status,
-service_creation_flag,
-waiting_flag,
-prep_flag,
-serve_flag,
-hold_flag,
-missing_calls_flag,
+            service_creation_flag,
+            waiting_flag,
+            prep_flag,
+            serve_flag,
+            hold_flag,
+            missing_calls_flag,
             agent_info.agent_id,
             office_id,
             office_type,
@@ -326,19 +328,19 @@ missing_calls_flag,
             item_list.waiting_duration,
             item_list.prep_duration,
             item_list.hold_duration,
-service_creation_flag,
-waiting_flag,
-prep_flag,
-serve_flag,
-hold_flag,
-missing_calls_flag,
-service_creation_flag_visit,
-waiting_flag_visit,
-prep_flag_visit,
-serve_flag_visit,
-hold_flag_visit,
-inaccurate_time_visit,
-missing_calls_flag_visit,
+            service_creation_flag,
+            waiting_flag,
+            prep_flag,
+            serve_flag,
+            hold_flag,
+            missing_calls_flag,
+            service_creation_flag_visit,
+            waiting_flag_visit,
+            prep_flag_visit,
+            serve_flag_visit,
+            hold_flag_visit,
+            inaccurate_time_visit,
+            missing_calls_flag_visit,
             status,
             office_name,
             office_size,
@@ -355,7 +357,11 @@ missing_calls_flag_visit,
           ORDER BY welcome_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching
-    #persist_for: "1 hour"
+    distribution_style: all
+    sql_trigger_value: SELECT COUNT(*) FROM derived.theq_step1 WHERE
+    --namespace <> 'TheQ_dev' AND
+    client_id NOT IN (SELECT * from servicebc.bad_clientids ) ;;
+
     }
 
 
