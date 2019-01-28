@@ -1,5 +1,5 @@
 
-connection: "redshift"
+connection: "redshift_pacific_time"
 # Set the week start day to Sunday. Default is Monday
 week_start_day: sunday
 # Set fiscal year to begin April 1st -- https://docs.looker.com/reference/model-params/fiscal_month_offset
@@ -21,10 +21,10 @@ explore: cfms_poc_no_filter {
   from: cfms_poc
 }
 
+# A copy of the original CFMS / TheQ model for comparisons
+explore: cfms_old {}
 
-# See: https://docs.looker.com/reference/explore-params/access_filter
 explore: cfms_dev {}
-
 
 explore: cats {}
 
