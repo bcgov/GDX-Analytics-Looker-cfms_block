@@ -5,7 +5,7 @@ view: cfms_dev {
     ev.name_tracker AS namespace,
     ev.event_name,
     CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS event_time,
-    DATEDIFF(milliseconds, current_date, event_time)/1000.0 AS event_time_number,
+    DATEDIFF(milliseconds, event_time, '1970-01-01 00:00:00')/1000.0 AS event_time_number,
     client_id,
     service_count,
     office_id,
