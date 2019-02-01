@@ -254,8 +254,7 @@ view: cfms_poc {
   }
   measure: hold_duration_per_service_average {
     description: "Average hold duration per service delivered."
-    type:  average_distinct
-    sql_distinct_key: ${client_id} ;;
+    type:  average
     sql: (1.00 * ${TABLE}.hold_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
     group_label: "Hold Duration"
