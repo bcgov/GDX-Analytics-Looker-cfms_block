@@ -1,6 +1,6 @@
 ## GDX Looker SBC
 
-This is for the Government of British Columbia’s Service BC instance of their LookerML project. LookerML is a language for describing dimensions, aggregates, calculations and data relationships in a SQL database.
+This is for the Government of British Columbia’s Service BC instance of their LookerML project. [LookerML](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml) is a language for describing dimensions, aggregates, calculations and data relationships in a SQL database.
 
 ## Features
 
