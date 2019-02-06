@@ -5,7 +5,7 @@ view: cfms_dev {
     ev.name_tracker AS namespace,
     ev.event_name,
     CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS event_time,
-    DATEDIFF(milliseconds, event_time, '1970-01-01 00:00:00')/1000.0 AS event_time_number,
+    DATEDIFF(milliseconds, '1970-01-01 00:00:00',event_time)/1000.0 AS event_time_number,
     client_id,
     service_count,
     office_id,
@@ -39,7 +39,7 @@ view: cfms_dev {
       ON ev.event_id = cl .root_id AND ev.collector_tstamp = cl.root_tstamp
   LEFT JOIN servicebc.service_info AS si ON si.svccode = cs.program_id
 
-  WHERE ev.name_tracker IN ('TheQ_dev')
+  WHERE ev.name_tracker IN ('TheQ_dev','TheQ_prod','TheQ_test')
     AND client_id IS NOT NULL
   ),
   service_info_pre AS (
