@@ -8,7 +8,7 @@ Looker is a data vision tool that is used with Snowplow Analytics, it displays t
 
 ## Snowplow Schemas
 
-Snowplow schemas can be found in [schemas/](./schemas/)
+Snowplow schemas can be found in [schemas/](./schemas/).
 
 ## Flow Diagrams
 
