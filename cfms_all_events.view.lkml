@@ -7,8 +7,7 @@ view: cfms_all_events {
       event_id, name_tracker AS namespace,
       event_name,
       event_version,
-      -- CONVERT_TIMEZONE('UTC', 'US/Pacific', derived_tstamp) AS
-      derived_tstamp AS event_time,
+      CONVERT_TIMEZONE('UTC', 'America/Vancouver', dvce_created_tstamp) AS event_time,
       client_id,
       service_count,
       office_id,
@@ -18,6 +17,7 @@ view: cfms_all_events {
       parent_id,
       program_name,
       transaction_name,
+      leave_status,
       count,
       quantity,
       COALESCE(fi.inaccurate_time,fi1.inaccurate_time) AS inaccurate_time
@@ -36,6 +36,8 @@ view: cfms_all_events {
       ON ev.event_id = fi.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_hold_1 AS ho
       ON ev.event_id = ho.root_id
+      LEFT JOIN atomic.ca_bc_gov_cfmspoc_customerleft_2 AS le
+      ON ev.event_id = le.root_id
       WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod') AND client_id IS NOT NULL
       ORDER BY event_time, client_id, service_count
           ;;
@@ -128,5 +130,9 @@ view: cfms_all_events {
       sql:  ${TABLE}.event_id ;;
     }
 
+    dimension: leave_status {
+      type: string
+      sql: ${TABLE}.leave_status ;;
+    }
 
   }
