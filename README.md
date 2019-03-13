@@ -1,10 +1,10 @@
 ## GDX Looker SBC
 
-This is for the Government of British Columbia’s Service BC instance of their LookerML project. [LookerML](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml) is a language for describing dimensions, aggregates, calculations and data relationships in a SQL database.
+This block represents an Instance of the Government of British Columbia’s Service BC LookerML project. [LookerML](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml) is a language for describing dimensions, aggregates, calculations and data relationships in a SQL database.
 
 ## Features
 
-Looker is a data vision tool that is used with Snowplow Analytics, it displays the data in dashboards that a user can customize.
+Looker is a data vision tool that is used with Snowplow Analytics, it presents the data in various formats such as visuals, tables and maps and allows the user to customize the results with an interactive model.
 
 ## Contents by Directory:
 
@@ -18,11 +18,11 @@ Diagrams showing the flows that are modelled are included in [flow_diagrams/](./
 
 ## Project Status
 
-Currently this project is still in development.
+This project is at its final development phases, however GDX Analytics team will continue to update and maintain the LookerML files as required.
 
 ## Getting Help
 
-Please Contact the GDX Service desk for any analytics service help, for inquiries about starting a new analytics account for Government please contact The GDX Analytics team.
+Please contact the GDX Service desk at gcpe.servicedesk@gov.bc.ca for any analytics service help, for inquiries about starting a new analytics account for Government please contact The GDX Analytics team.
 
 ## Contributors
 
