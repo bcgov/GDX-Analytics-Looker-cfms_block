@@ -6,6 +6,10 @@ This block represents an Instance of the Government of British Columbia’s Serv
 
 Looker is a data vision tool that is used with Snowplow Analytics, it presents the data in various formats such as visuals, tables and maps and allows the user to customize the results with an interactive model.
 
+## Project Status
+
+This project is currently at final development phases, however, GDX Analytics team will continue to update and maintain the LookerML files as required.
+
 ## Contents by Directory:
 
 ### [Snowplow Schemas](./schemas/)
@@ -15,10 +19,6 @@ Snowplow schemas can be found in [schemas/](./schemas/).
 ### [Flow Diagrams](./flow_diagrams/)
 
 Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool. 
-
-## Project Status
-
-This project is at its final development phases, however GDX Analytics team will continue to update and maintain the LookerML files as required.
 
 ## Getting Help
 
