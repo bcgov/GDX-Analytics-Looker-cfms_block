@@ -6,11 +6,13 @@ This is for the Government of British Columbia’s Service BC instance of their 
 
 Looker is a data vision tool that is used with Snowplow Analytics, it displays the data in dashboards that a user can customize.
 
-## Snowplow Schemas
+## Contents by Directory:
+
+### [Snowplow Schemas](./schemas/)
 
 Snowplow schemas can be found in [schemas/](./schemas/).
 
-## Flow Diagrams
+### [Flow Diagrams](./flow_diagrams/)
 
 Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool. 
 
