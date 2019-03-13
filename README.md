@@ -12,11 +12,11 @@ This project is currently at final development phases, however, GDX Analytics te
 
 ## Contents by Directory:
 
-### [Snowplow Schemas](./schemas/)
+#### [Snowplow Schemas/ ](./schemas/)
 
 Snowplow schemas can be found in [schemas/](./schemas/).
 
-### [Flow Diagrams](./flow_diagrams/)
+#### [Flow Diagrams/ ](./flow_diagrams/)
 
 Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool. 
 
