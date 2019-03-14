@@ -1,14 +1,10 @@
 ## GDX Looker SBC
 
-This Block represents an instance of the Government of British Columbia’s Service BC [LookerML](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml) project. [LookerML](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml) is a language for describing dimensions, aggregates, calculations and data relationships in a SQL database.
-
-## Features
-
-Looker is a data vision tool that is used with Snowplow Analytics. It presents the data in various formats such as visuals, tables and maps and allows the user to customize the results with an interactive model.
+This Block represents an instance of the Government of British Columbia’s Service BC service analytics project. It is based on [Snowplow](https://snowplowanalytics.com/) and [Looker](https://looker.com/) .
 
 ## Project Status
 
-This project is currently at final development phases, however, GDX Analytics team will continue to update and maintain the LookerML files as required.
+This project is in production and the GDX Analytics Team will continue to update and maintain the project as required.
 
 ## Contents by Directory:
 
@@ -25,13 +21,17 @@ Diagrams showing the flows that are modelled are included in [flow_diagrams/](./
 
 Represents an instance of Government of British Columbia’s Snowplow tracking. This includes pushing custom events to the Snowplow Tracker, and generation of cryptographically signed SSO embed URL pointing to a dashboard.
 
+[Queue Managment System](https://github.com/bcgov/queue-management)
+
+The Queue Managment System will be used to manage the citizen flow and provide analtyics for our Service BC locations. This system is designed to be used for government offices with a large number of services.
+
 ## Getting Help
 
-Please contact the GDX Service desk at gdx.servicedesk@gov.bc.ca for any analytics service help, for inquiries about starting a new analytics account for Government please contact The GDX Analytics team.
+For any questions regarding this project, please contact the GDX Analytics Team.
 
 ## Contributors
 
-The GDX analytics team will be the main contributors to this project currently. They will maintain the code as well.
+The GDX Analytics Team are the main contributors to this project and maintain the code.
 
 ## License
 
