@@ -20,6 +20,11 @@ Snowplow schemas can be found in [schemas/](./schemas/).
 
 Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool. 
 
+## Relevant Repositories
+[GDX-Analytics/](https://github.com/bcgov/GDX-Analytics/)
+
+Represents an instance of Government of British Columbia’s Snowplow tracking. This includes pushing custom events to the Snowplow Tracker, and generation of cryptographically signed SSO embed URL pointing to a dashboard.
+
 ## Getting Help
 
 Please contact the GDX Service desk at gcpe.servicedesk@gov.bc.ca for any analytics service help, for inquiries about starting a new analytics account for Government please contact The GDX Analytics team.
