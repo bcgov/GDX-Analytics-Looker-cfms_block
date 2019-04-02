@@ -38,7 +38,7 @@ view: cfms_all_events {
       ON ev.event_id = ho.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_customerleft_2 AS le
       ON ev.event_id = le.root_id
-      WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod') AND client_id IS NOT NULL
+      WHERE ev.name_tracker IN ('CFMS_poc', 'TheQ_dev', 'TheQ_test', 'TheQ_prod', "TheQ_localhost") AND client_id IS NOT NULL
       ORDER BY event_time, client_id, service_count
           ;;
           # https://docs.looker.com/data-modeling/learning-lookml/caching

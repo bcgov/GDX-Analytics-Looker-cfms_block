@@ -39,7 +39,7 @@ view: cfms_dev {
       ON ev.event_id = cl .root_id AND ev.collector_tstamp = cl.root_tstamp
   LEFT JOIN servicebc.service_info AS si ON si.svccode = cs.program_id
 
-  WHERE ev.name_tracker IN ('TheQ_dev','TheQ_prod','TheQ_test')
+  WHERE ev.name_tracker IN ('TheQ_dev','TheQ_prod','TheQ_test','TheQ_localhost')
     AND client_id IS NOT NULL
   ),
   service_info_pre AS (
