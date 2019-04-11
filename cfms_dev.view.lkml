@@ -234,7 +234,7 @@ view: cfms_dev {
         END AS channel_sort,
       -----------------------------------
       -- Add a flag for back office transactions
-      CASE WHEN program_name = 'Back Office'
+      CASE WHEN program_name = 'Back Office' OR channel = 'back-office'
         THEN 'Back Office'
         ELSE 'Front Office'
         END as back_office,
