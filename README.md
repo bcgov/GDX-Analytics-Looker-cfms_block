@@ -1,6 +1,6 @@
 ## GDX Looker SBC
 
-This Block represents an instance of the Government of British Columbia’s Service BC service analytics project. It is based on [Snowplow](https://snowplowanalytics.com/) and [Looker](https://looker.com/) .
+This Block represents an instance of the Government of British Columbia’s Service BC service analytics project. It is based on [Snowplow](https://snowplowanalytics.com/) and [Looker](https://looker.com/).
 
 ## Project Status
 
@@ -14,7 +14,7 @@ Snowplow schemas can be found in [schemas/](./schemas/).
 
 #### [Flow Diagrams/ ](./flow_diagrams/)
 
-Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool. 
+Diagrams showing the flows that are modelled are included in [flow_diagrams/](./flow_diagrams/). The XML files can be edited using the free online [Draw IO](https://www.draw.io/) tool.
 
 ## Relevant Repositories
 [GDX-Analytics/](https://github.com/bcgov/GDX-Analytics/)
