@@ -24,7 +24,7 @@ view: cfms_poc {
         CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE hold_duration_zscore END AS hold_duration_zscore,
         CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE serve_duration_zscore END AS serve_duration_zscore,
 
-        office_name, office_size, area_number, isweekend, isholiday, sbcquarter, lastdayofpsapayperiod, hourly_bucket, half_hour_bucket, date_time_of_day
+        office_name, office_size, area_number, current_area, isweekend, isholiday, sbcquarter, lastdayofpsapayperiod, hourly_bucket, half_hour_bucket, date_time_of_day
         FROM derived.theq_step1
         LEFT JOIN servicebc.inaccurate_time_clientids ON theq_step1.client_id = inaccurate_time_clientids.client_id
         WHERE theq_step1.client_id NOT IN (SELECT * from servicebc.bad_clientids ) ;;
@@ -167,21 +167,21 @@ view: cfms_poc {
     type:  sum
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
-    group_label: "service_creation Duration"
+    group_label: "Service Creation Duration"
   }
   measure: service_creation_duration_per_visit_max {
     description: "Maximum service_creation duration."
     type:  max
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
-    group_label: "service_creation Duration"
+    group_label: "Service Creation Duration"
   }
   measure: service_creation_duration_per_visit_average {
     description: "Average service_creation duration."
     type:  average
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
-    group_label: "service_creation Duration"
+    group_label: "Service Creation Duration"
   }
   measure: waiting_duration_total {
     description: "Total waiting duration."
@@ -787,6 +787,11 @@ view: cfms_poc {
   dimension: area_number {
     type:  number
     sql:  ${TABLE}.area_number ;;
+    group_label: "Office Info"
+  }
+  dimension: current_area {
+    type: string
+    sql:  ${TABLE}.current_area ;;
     group_label: "Office Info"
   }
   dimension: office_type {
