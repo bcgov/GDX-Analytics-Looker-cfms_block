@@ -302,6 +302,7 @@ view: cfms_dev {
       office_info.site AS office_name,
       office_info.officesize AS office_size,
       office_info.area AS area_number,
+      office_info.current_area AS current_area,
       ----------------------
       dd.isweekend::BOOLEAN,
       dd.isholiday::BOOLEAN,
@@ -347,6 +348,7 @@ view: cfms_dev {
       office_name,
       office_size,
       area_number,
+      current_area,
       office_type,
       program_id,
       program_name,
@@ -1121,6 +1123,11 @@ view: cfms_dev {
   dimension: area_number {
     type:  number
     sql:  ${TABLE}.area_number ;;
+    group_label: "Office Info"
+  }
+  dimension: current_area {
+    type: string
+    sql:  ${TABLE}.current_area ;;
     group_label: "Office Info"
   }
   dimension: office_type {
