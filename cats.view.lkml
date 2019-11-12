@@ -290,6 +290,11 @@ view: cats {
       group_label: "Office Info"
       drill_fields: [office_name]
     }
-
+    dimension: current_area {
+      type:  number
+      sql:  ${TABLE}.current_area ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
 
   }
