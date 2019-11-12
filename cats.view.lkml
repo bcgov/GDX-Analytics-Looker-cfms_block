@@ -36,7 +36,7 @@ view: cats {
           to_char(govdate, 'HH24:MI:SS') AS date_time_of_day,
           office_info.officesize AS office_size,
           office_info.area AS area_number,
-          office.current_area AS current_area,
+          office_info.current_area AS current_area,
           office_info.id AS office_id
           FROM servicebc.cats_gdx AS gdx
           LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate, sbc.firewall_time)) < 30
@@ -290,6 +290,11 @@ view: cats {
       group_label: "Office Info"
       drill_fields: [office_name]
     }
-
+    dimension: current_area {
+      type:  number
+      sql:  ${TABLE}.current_area ;;
+      group_label: "Office Info"
+      drill_fields: [office_name]
+    }
 
   }
