@@ -20,7 +20,7 @@
 		},
 		"counter_type": {
 			"type": "string",
-			"enum": ["Cheque P/U", "Cheque Release", "Counter", "ICBC Test", "Intake Support", "Ptax", "Reception", "Training", "Urgent Duty", "Urgent Virtual"]
+			"maxLength": 255
 		}
 	},
 	"required": ["agent_id", "role","counter_type"],
