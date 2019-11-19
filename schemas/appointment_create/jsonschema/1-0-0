@@ -18,11 +18,6 @@
 			"type": "string",
 			"maxLength": 20
 		},
-		"client_id": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 9223372036854775807
-		},
 		"program_id": {
 			"type": "string",
 			"maxLength": 255
@@ -40,6 +35,6 @@
 			"maxLength": 255
 		}
 	},
-	"required": ["appointment_id","appointment_timestamp","client_id", "program_id", "program_name", "transaction_name"],
+	"required": ["appointment_id","appointment_timestamp","program_id", "program_name", "transaction_name"],
 	"additionalProperties": false
 }

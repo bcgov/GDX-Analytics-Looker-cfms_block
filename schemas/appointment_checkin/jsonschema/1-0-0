@@ -13,13 +13,8 @@
 			"type": "integer",
 			"minimum": 0,
 			"maximum": 9223372036854775807
-		},
-		"client_id": {
-			"type": "integer",
-			"minimum": 0,
-			"maximum": 9223372036854775807
 		}
 	},
-	"required": ["appointment_id","client_id"],
+	"required": ["appointment_id"],
 	"additionalProperties": false
 }
