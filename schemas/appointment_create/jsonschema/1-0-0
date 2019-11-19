@@ -14,7 +14,11 @@
 			"minimum": 0,
 			"maximum": 9223372036854775807
 		},
-		"appointment_timestamp": {
+		"appointment_start_timestamp": {
+			"type": "string",
+			"maxLength": 20
+		},
+		"appointment_end_timestamp": {
 			"type": "string",
 			"maxLength": 20
 		},
@@ -35,6 +39,6 @@
 			"maxLength": 255
 		}
 	},
-	"required": ["appointment_id","appointment_timestamp","program_id", "program_name", "transaction_name"],
+	"required": ["appointment_id","appointment_start_timestamp","appointment_end_timestamp","program_id", "program_name", "transaction_name"],
 	"additionalProperties": false
 }

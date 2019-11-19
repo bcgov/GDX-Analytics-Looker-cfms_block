@@ -14,7 +14,11 @@
 			"minimum": 0,
 			"maximum": 9223372036854775807
 		},
-		"appointment_timestamp": {
+		"appointment_start_timestamp": {
+			"type": ["string", "null"],
+			"maxLength": 20
+		},
+		"appointment_end_timestamp": {
 			"type": ["string", "null"],
 			"maxLength": 20
 		},
@@ -23,6 +27,6 @@
 			"enum": ["update","cancel"]
 		}
 	},
-	"required": ["appointment_id","appointment_timestamp","status"],
+	"required": ["appointment_id","status"],
 	"additionalProperties": false
 }
