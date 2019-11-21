@@ -17,7 +17,7 @@ view: cats {
           -- REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
           refer,
           office AS office_name,
-          client,
+          client AS office_owner,
           gdx_id,
           ip AS gdx_ip,
           source_translated_ip,
@@ -288,7 +288,7 @@ view: cats {
     }
     dimension: office_owner {
       type:  string
-      sql:  ${TABLE}.client ;;
+      sql:  ${TABLE}.office_owner ;;
       group_label: "Office Info"
     }
     dimension: office_size {
