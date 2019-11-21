@@ -583,6 +583,11 @@ view: cfms_poc {
     sql: abs(${TABLE}.service_creation_duration_zscore) >= 3 ;;
     group_label: "Z-Scores"
   }
+  dimension: no_wait_visit {
+    description: "Did the visit skip the line?"
+    type: yesno
+    sql: ${TABLE}.no_wait_visit ;;
+  }
   dimension: waiting_duration_outlier {
     description: "Is the waiting duration greater than 3 standard deviations from the average?"
     type:  yesno
