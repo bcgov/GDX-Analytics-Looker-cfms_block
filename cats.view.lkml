@@ -90,12 +90,14 @@ view: cats {
     }
 
     dimension: proxy {
+      hidden: yes
       type: string
       sql: ${TABLE}.proxy;;
       group_label: "Page Info"
     }
 
     dimension: port {
+      hidden: yes
       type: string
       sql: ${TABLE}.port;;
       group_label: "Page Info"
