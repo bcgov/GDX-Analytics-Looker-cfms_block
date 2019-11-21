@@ -159,6 +159,7 @@ view: cfms_dev {
     CASE WHEN (hold_in = hold_out AND hold_in > 0) THEN hold_duration ELSE NULL END AS hold_duration,
     --- Set flags for states
     CASE WHEN service_creation_in = service_creation_out + 1 THEN TRUE END AS service_creation_flag,
+    CASE WHEN waiting_in = 0 THEN TRUE END AS no_wait_flag,
     CASE WHEN waiting_in = waiting_out + 1 THEN TRUE END AS waiting_flag,
     CASE WHEN prep_in = prep_out + 1 THEN TRUE END AS prep_flag,
     CASE WHEN serve_in = serve_out + 1 THEN TRUE END AS serve_flag,
@@ -193,7 +194,8 @@ view: cfms_dev {
     BOOL_OR(serve_flag) AS serve_flag_visit,
     BOOL_OR(hold_flag) AS hold_flag_visit,
     BOOL_OR(inaccurate_time) AS inaccurate_time_visit,
-    BOOL_OR(missing_calls_flag) AS missing_calls_flag_visit
+    BOOL_OR(missing_calls_flag) AS missing_calls_flag_visit,
+    BOOL_AND(no_wait_flag) AND (NOT BOOL_OR(inaccurate_time) OR BOOL_OR(inaccurate_time) IS NULL) AS no_wait_visit
     FROM item_list
     GROUP BY client_id, namespace
   )
@@ -213,6 +215,7 @@ view: cfms_dev {
 
       transaction_count,
       item_list.inaccurate_time,
+      no_wait_visit,
       CASE
         WHEN (status = 'complete') THEN finish_type
         ELSE status
@@ -344,6 +347,7 @@ view: cfms_dev {
       hold_flag_visit,
       inaccurate_time_visit,
       missing_calls_flag_visit,
+      no_wait_visit,
       status,
       office_name,
       office_size,
@@ -918,6 +922,11 @@ view: cfms_dev {
     type:  yesno
     sql: abs(${TABLE}.service_creation_duration_zscore) >= 3 ;;
     group_label: "Z-Scores"
+  }
+  dimension: no_wait_visit {
+    description: "Did the visit skip the line?"
+    type: yesno
+    sql: ${TABLE}.no_wait_visit ;;
   }
   dimension: waiting_duration_outlier {
     description: "Is the waiting duration greater than 3 standard deviations from the average?"
