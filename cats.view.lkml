@@ -40,7 +40,7 @@ view: cats {
           office_info.area AS area_number,
           office_info.current_area AS current_area,
           office_info.id AS office_id
-          FROM servicebc.cats_gdx_gdxdsd_2342  AS gdx
+          FROM servicebc.cats_gdx  AS gdx
           LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate::timestamp, sbc.firewall_time)) < 30
           -- Use sbc.office where it exists. If it is NULL, the try looking up the site based on the asset tag
           --LEFT JOIN servicebc.cats_info ON servicebc.cats_info.asset_tag = sbc.source_host_name AND sbc.source_host_name <> ''
