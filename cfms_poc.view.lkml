@@ -1,33 +1,7 @@
 view: cfms_poc {
   derived_table: {
     sql:
-      SELECT theq_step1.client_id, service_count, namespace, welcome_time, latest_time,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE service_creation_duration END AS service_creation_duration,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE waiting_duration END AS waiting_duration,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE prep_duration END AS prep_duration,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE serve_duration END AS serve_duration,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE hold_duration END AS hold_duration,
-        transaction_count, inaccurate_time,
-
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN 'Override' ELSE status END AS status,
-
-        agent_id, office_id, office_type, channel, program_id, program_name, parent_id, transaction_name, channel_sort, back_office,
-
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE service_creation_duration_total END AS service_creation_duration_total,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE waiting_duration_total END AS waiting_duration_total,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE prep_duration_total END AS prep_duration_total,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE hold_duration_total END AS hold_duration_total,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE serve_duration_total END AS serve_duration_total,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE service_creation_duration_zscore END AS service_creation_duration_zscore,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE waiting_duration_zscore END AS waiting_duration_zscore,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE prep_duration_zscore END AS prep_duration_zscore,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE hold_duration_zscore END AS hold_duration_zscore,
-        CASE WHEN inaccurate_time_clientids.client_id IS NOT NULL THEN NULL ELSE serve_duration_zscore END AS serve_duration_zscore,
-
-        office_name, office_size, area_number, current_area, isweekend, isholiday, sbcquarter, lastdayofpsapayperiod, hourly_bucket, half_hour_bucket, date_time_of_day
-        FROM derived.theq_step1
-        LEFT JOIN servicebc.inaccurate_time_clientids ON theq_step1.client_id = inaccurate_time_clientids.client_id
-        WHERE theq_step1.client_id NOT IN (SELECT * from servicebc.bad_clientids ) ;;
+      SELECT * FROM derived.theq_step1 ;;
   }
 
 
