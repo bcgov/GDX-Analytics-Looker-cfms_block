@@ -1,6 +1,6 @@
 view: cats {
   derived_table: {
-    sql: SELECT govdate,
+    sql: SELECT govdate::timestamp,
           COALESCE(cms.node_id,SPLIT_PART(SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'id=', 2)) AS node_id,
           get_string,
           CASE WHEN (SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) = '/gov/search')
