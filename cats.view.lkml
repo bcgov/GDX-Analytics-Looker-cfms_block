@@ -17,10 +17,12 @@ view: cats {
           -- REGEXP_SUBSTR ( SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',2), 'q=.*&') AS search,
           refer,
           office AS office_name,
-          client,
+          client AS office_owner,
           gdx_id,
           ip AS gdx_ip,
           source_translated_ip,
+          proxy,
+          port,
           --source_host_name,
           --source_mac_address,
           --sbc.source_host_name AS asset_tag,
@@ -29,7 +31,7 @@ view: cats {
           dd.isholiday::BOOLEAN,
           dd.sbcquarter, dd.lastdayofpsapayperiod::date,
           to_char(govdate, 'HH24:00-HH24:59') AS hourly_bucket,
-          CASE WHEN date_part(minute, govdate) < 30
+          CASE WHEN date_part(minute, govdate::timestamp) < 30
             THEN to_char(govdate, 'HH24:00-HH24:29')
             ELSE to_char(govdate, 'HH24:30-HH24:59')
           END AS half_hour_bucket,
@@ -38,8 +40,8 @@ view: cats {
           office_info.area AS area_number,
           office_info.current_area AS current_area,
           office_info.id AS office_id
-          FROM servicebc.cats_gdx AS gdx
-          LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate, sbc.firewall_time)) < 30
+          FROM servicebc.cats_gdx  AS gdx
+          LEFT JOIN servicebc.cats_sbc AS sbc ON gdx.port = sbc.source_translated_port AND abs(DATEDIFF('minute', gdx.govdate::timestamp, sbc.firewall_time)) < 30
           -- Use sbc.office where it exists. If it is NULL, the try looking up the site based on the asset tag
           --LEFT JOIN servicebc.cats_info ON servicebc.cats_info.asset_tag = sbc.source_host_name AND sbc.source_host_name <> ''
           LEFT JOIN servicebc.office_info ON servicebc.office_info.site = sbc.office AND end_date IS NULL -- for now, get the most recent office info
@@ -87,6 +89,19 @@ view: cats {
       group_label: "Page Info"
     }
 
+    dimension: proxy {
+      hidden: yes
+      type: string
+      sql: ${TABLE}.proxy;;
+      group_label: "Page Info"
+    }
+
+    dimension: port {
+      hidden: yes
+      type: string
+      sql: ${TABLE}.port;;
+      group_label: "Page Info"
+    }
 
     dimension: get_string {
       type: string
@@ -275,7 +290,7 @@ view: cats {
     }
     dimension: office_owner {
       type:  string
-      sql:  ${TABLE}.client ;;
+      sql:  ${TABLE}.office_owner ;;
       group_label: "Office Info"
     }
     dimension: office_size {
