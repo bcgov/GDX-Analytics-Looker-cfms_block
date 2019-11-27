@@ -25,8 +25,24 @@
 		"status": {
 			"type": "string",
 			"enum": ["update","cancel"]
-		}
+		},
+                "program_id": {
+                        "type": "string",
+                        "maxLength": 255
+                },
+                "parent_id": {
+                        "type": ["string", "null"],
+                        "maxLength": 255
+                },
+                "program_name": {
+                        "type": "string",
+                        "maxLength": 255
+                },
+                "transaction_name": {
+                        "type": "string",
+                        "maxLength": 255
+                }
 	},
-	"required": ["appointment_id","status"],
+	"required": ["appointment_id","status","program_id", "program_name", "transaction_name"],
 	"additionalProperties": false
 }
