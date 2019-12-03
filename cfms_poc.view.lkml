@@ -1,9 +1,5 @@
 view: cfms_poc {
-  derived_table: {
-    sql:
-      SELECT * FROM derived.theq_step1 ;;
-  }
-
+  sql_table_name: derived.theq_step1 ;;
 
   dimension: service_creation_flag {
     type: yesno
@@ -137,21 +133,21 @@ view: cfms_poc {
 
   # Time based measures
   measure: service_creation_duration_total {
-    description: "Total service_creation duration."
+    description: "Total service creation duration."
     type:  sum
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
     group_label: "Service Creation Duration"
   }
   measure: service_creation_duration_per_visit_max {
-    description: "Maximum service_creation duration."
+    description: "Maximum service creation duration."
     type:  max
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
     group_label: "Service Creation Duration"
   }
   measure: service_creation_duration_per_visit_average {
-    description: "Average service_creation duration."
+    description: "Average service creation Duration."
     type:  average
     sql: (1.00 * ${TABLE}.service_creation_duration)/(60*60*24) ;;
     value_format: "[h]:mm:ss"
@@ -950,6 +946,10 @@ view: cfms_poc {
     type: string
     sql: ${TABLE}.channel ;;
     order_by_field: channel_sort
+  }
+  dimension: counter_type {
+    type: string
+    sql: ${TABLE}.counter_type ;;
   }
   dimension: inaccurate_time {
     description: "A flag to indicate that the timing on this service is unreliable. It will be included in counts, but not timing averages."
