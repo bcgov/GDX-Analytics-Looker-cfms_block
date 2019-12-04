@@ -3,6 +3,22 @@ view: cfms_all_events {
     sql: -- Build a view containing all events using the name_tracker "CFMS_poc"
       -- this will include all fields for all possible events.
       -- NOTE: we are ignoring instances where there is no client_id
+        WITH agent AS (
+          SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id,
+               CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, role
+          FROM atomic.ca_bc_gov_cfmspoc_agent_2 AS a2
+        UNION
+          SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id, counter_type, role
+          FROM atomic.ca_bc_gov_cfmspoc_agent_3 AS a3
+        ),
+        citizen AS (
+          SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, client_id,
+            CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, service_count
+          FROM atomic.ca_bc_gov_cfmspoc_citizen_3 AS c3
+        UNION
+          SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, client_id, counter_type, service_count
+          FROM atomic.ca_bc_gov_cfmspoc_citizen_4 AS c4
+      )
       SELECT
       event_id, name_tracker AS namespace,
       event_name,
@@ -12,6 +28,7 @@ view: cfms_all_events {
       service_count,
       office_id,
       agent_id,
+      c.counter_type,
       channel,
       program_id,
       parent_id,
@@ -22,9 +39,9 @@ view: cfms_all_events {
       quantity,
       COALESCE(fi.inaccurate_time,fi1.inaccurate_time) AS inaccurate_time
       FROM atomic.events AS ev
-      LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
+      LEFT JOIN agent AS a
       ON ev.event_id = a.root_id
-      LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
+      LEFT JOIN citizen AS c
       ON ev.event_id = c.root_id
       LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
       ON ev.event_id = o.root_id
@@ -91,7 +108,13 @@ view: cfms_all_events {
       sql: ${TABLE}.channel ;;
     }
 
-    dimension: program_id {
+
+    dimension: counter_type {
+      type: string
+      sql: ${TABLE}.counter_type ;;
+    }
+
+      dimension: program_id {
       type: number
       sql: ${TABLE}.program_id ;;
     }
