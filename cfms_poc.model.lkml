@@ -34,3 +34,5 @@ explore: cfms_dev {
 explore: cats {}
 
 explore: cfms_all_events {}
+
+explore: all_appointments {}
