@@ -10,7 +10,8 @@ view: cats {
             THEN 'Search'
             ELSE COALESCE (SPLIT_PART(cms.dcterms_creator, '|', 2), SPLIT_PART(cms_guid.dcterms_creator, '|', 2))
             END AS page_owner,
-          themes.theme,themes.subtheme,themes.theme_id,themes.subtheme_id,themes.title,
+          --themes.theme,themes.subtheme,themes.theme_id,themes.subtheme_id,themes.title,
+          cms_themes.theme,cms_themes.subtheme,cms_themes.theme_id,cms_themes.subtheme_id,cms_themes.title,
           CASE WHEN (SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1) = '/gov/content')
             THEN cms_guid.hr_url
             ELSE SPLIT_PART(SPLIT_PART(get_string, ' ', 2), '?',1)

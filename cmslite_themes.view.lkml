@@ -1,3 +1,5 @@
+include: "//cmslite_metadata/views/metadata.view"
+
 view: cmslite_themes {
   derived_table: {
     sql: WITH ids AS (
@@ -15,16 +17,16 @@ view: cmslite_themes {
             WHEN TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 3)) <> '' THEN TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 3)) -- take the third entry. The first is always blank as the string has '|' on each end and the second is the theme
             ELSE NULL
           END AS subtheme_id
-          FROM cmslite.metadata AS cm
-          LEFT JOIN cmslite.metadata AS cm_parent ON cm_parent.page_type = 'BC Gov Theme' AND cm_parent.node_id = cm.parent_node_id
+          FROM ${metadata.SQL_TABLE_NAME} AS cm
+          LEFT JOIN ${metadata.SQL_TABLE_NAME} AS cm_parent ON cm_parent.page_type = 'BC Gov Theme' AND cm_parent.node_id = cm.parent_node_id
       )
       SELECT
       ids.*,
       cm_theme.title AS theme,
       cm_sub_theme.title AS subtheme
       FROM ids
-      LEFT JOIN cmslite.metadata AS cm_theme ON cm_theme.node_id = theme_id
-      LEFT JOIN cmslite.metadata AS cm_sub_theme ON cm_sub_theme.node_id = subtheme_id
+      LEFT JOIN ${metadata.SQL_TABLE_NAME} AS cm_theme ON cm_theme.node_id = theme_id
+      LEFT JOIN ${metadata.SQL_TABLE_NAME} AS cm_sub_theme ON cm_sub_theme.node_id = subtheme_id
       ;;
     persist_for: "24 hours"
     distribution_style: all
