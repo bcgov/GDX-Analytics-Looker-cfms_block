@@ -1,5 +1,5 @@
-include: "//cmslite_metadata/views/metadata.view"
-include: "//cmslite_metadata/views/themes.view"
+include: "//cmslite_metadata/Views/metadata.view"
+include: "//cmslite_metadata/Views/themes.view"
 
 view: cats {
   derived_table: {
