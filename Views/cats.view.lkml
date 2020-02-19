@@ -169,6 +169,7 @@ view: cats {
     }
 
     dimension: asset_tag {
+      hidden: yes
       type: string
       sql: ${TABLE}.asset_tag;;
     }
