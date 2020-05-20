@@ -53,7 +53,7 @@ view: all_appointments {
         sql: ${TABLE}.office_id ;;
       }
 
-       dimension: agent_id {
+      dimension: agent_id {
         type: number
         sql: ${TABLE}.agent_id ;;
       }
