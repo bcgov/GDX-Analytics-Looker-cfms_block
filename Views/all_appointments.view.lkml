@@ -54,11 +54,11 @@ view: all_appointments {
       }
 
        dimension: agent_id {
-        type: number
+        type: string
         sql: ${TABLE}.agent_id ;;
       }
       dimension: role {
-        type: number
+        type: string
         sql: ${TABLE}.role ;;
       }
       dimension: counter_type {
