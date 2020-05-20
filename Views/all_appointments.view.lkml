@@ -13,6 +13,8 @@ view: all_appointments {
             event_name, appointment_id, appointment_start_timestamp, appointment_end_timestamp, status, program_id, parent_id, program_name, transaction_name,
             appointments.root_id AS event_id,
             a.agent_id,
+            a.role,
+            a.counter_type,
             c.client_id,
             o.office_id
           FROM appointments
@@ -51,10 +53,19 @@ view: all_appointments {
         sql: ${TABLE}.office_id ;;
       }
 
-      dimension: agent_id {
+       dimension: agent_id {
         type: number
         sql: ${TABLE}.agent_id ;;
       }
+      dimension: role {
+        type: number
+        sql: ${TABLE}.role ;;
+      }
+      dimension: counter_type {
+        type: number
+        sql: ${TABLE}.counter_type ;;
+      }
+
 
       dimension: program_id {
         type: number
