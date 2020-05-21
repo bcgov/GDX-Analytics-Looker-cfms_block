@@ -10,13 +10,14 @@ view: all_appointments {
           )
           SELECT
             CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointments.root_tstamp) AS event_time,
-            event_name, appointment_id, appointment_start_timestamp, appointment_end_timestamp, status, program_id, parent_id, program_name, transaction_name,
+            appointments.event_name, appointment_id, appointment_start_timestamp, appointment_end_timestamp, status, program_id, parent_id, program_name, transaction_name,
             appointments.root_id AS event_id,
             a.agent_id,
             a.role,
             a.counter_type,
             c.client_id,
-            o.office_id
+            o.office_id,
+            ev.name_tracker AS namespace
           FROM appointments
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_3 AS a
             ON appointments.root_id = a.root_id
@@ -24,15 +25,22 @@ view: all_appointments {
             ON appointments.root_id = c.root_id
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
             ON appointments.root_id = o.root_id
+          LEFT JOIN atomic.events AS ev ON ev.event_id = appointments.root_id AND ev.collector_tstamp = appointments.root_tstamp
           ORDER BY event_time, client_id, appointment_id
                   ;;
                   # https://docs.looker.com/data-modeling/learning-lookml/caching
     }
 
-      dimension: event_name {
-        type: string
-        sql: ${TABLE}.event_name ;;
-      }
+  dimension: namespace {
+    type: string
+    sql: ${TABLE}.namespace ;;
+  }
+
+  dimension: event_name {
+    type: string
+    sql: ${TABLE}.event_name ;;
+  }
+
       dimension: event_time {
         type: date_time
         sql: ${TABLE}.event_time ;;
