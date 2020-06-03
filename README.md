@@ -33,6 +33,9 @@ The central repository for work by the GDX Analytics Team.
 
 The Queue Managment System will be used to manage the citizen flow and provide analtyics for our Service BC locations. This system is designed to be used for government offices with a large number of services.
 
+[GDX-Analytics-Looker-theq_sdpr_block/](GDX-Analytics-Looker-theq_sdpr_block)
+The GDX Analytics project to support SDPR queue management analytics, which is based on this repository.
+
 ## Getting Help or Reporting an Issue
  
 For any questions regarding this project, or for inquiries about starting a new analytics account, please contact the GDX Analytics Team.
