@@ -1,9 +1,17 @@
 ## GDX Looker SBC
 
-This Block represents an instance of the Government of British Columbia’s Service BC service analytics project. It is based on [Snowplow](https://snowplowanalytics.com/) and [Looker](https://looker.com/).
+The GDX Analytics project to support Service BC analytics implementations. 
 
+## Features
+ 
+This project includes [Snowplow](https://snowplowanalytics.com/) schemas and [Looker](https://looker.com/) LookML code to support measurement and reporting for the Queue Managment System in Service BC offices and registration for appointments. 
+ 
+## Requirements
+ 
+Requires deployment onto a [Looker](https://looker.com/) instance with access to database tables as referenced by the '*.lkml' files.
+ 
 ## Project Status
-
+ 
 This project is in production and the GDX Analytics Team will continue to update and maintain the project as required.
 
 ## Contents by Directory:
@@ -19,15 +27,15 @@ Diagrams showing the flows that are modelled are included in [flow_diagrams/](./
 ## Relevant Repositories
 [GDX-Analytics/](https://github.com/bcgov/GDX-Analytics/)
 
-Represents an instance of Government of British Columbia’s Snowplow tracking. This includes pushing custom events to the Snowplow Tracker, and generation of cryptographically signed SSO embed URL pointing to a dashboard.
+The central repository for work by the GDX Analytics Team.
 
 [Queue Managment System](https://github.com/bcgov/queue-management)
 
 The Queue Managment System will be used to manage the citizen flow and provide analtyics for our Service BC locations. This system is designed to be used for government offices with a large number of services.
 
-## Getting Help
-
-For any questions regarding this project, please contact the GDX Analytics Team.
+## Getting Help or Reporting an Issue
+ 
+For any questions regarding this project, or for inquiries about starting a new analytics account, please contact the GDX Analytics Team.
 
 ## Contributors
 
