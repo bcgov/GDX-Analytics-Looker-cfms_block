@@ -63,15 +63,15 @@ view: appointments {
         END AS appointment_period,
         CASE
           WHEN appointment_start_timestamp::date < CURRENT_DATE AND (COALESCE(checkin_count,0) = 0) THEN 'no-show'
-          WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time > appointment_start_timestamp::date THEN 'late'
-          WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time <= appointment_start_timestamp::date THEN 'on-time'
+          WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time > dateadd(minute, 10, appointment_start_timestamp) THEN 'late'
+          WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time <= dateadd(minute, 10, appointment_start_timestamp) THEN 'on-time'
           WHEN appointment_start_timestamp::date = CURRENT_DATE AND (COALESCE(checkin_count,0) = 0) THEN 'appointment still open today'
           WHEN appointment_start_timestamp::date > CURRENT_DATE THEN 'appointment in future'
           ELSE 'error'
         END AS appointment_status,
         CASE WHEN appointment_start_timestamp::date < CURRENT_DATE AND (COALESCE(checkin_count,0) = 0) THEN 1 ELSE 0 END AS no_show_count,
-        CASE WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time > appointment_start_timestamp::date THEN 1 ELSE 0 END AS late_count,
-        CASE WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time <= appointment_start_timestamp::date THEN 1 ELSE 0 END AS on_time_count,
+        CASE WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time > dateadd(minute, 10, appointment_start_timestamp) THEN 1 ELSE 0 END AS late_count,
+        CASE WHEN (COALESCE(checkin_count,0) > 0) AND min_checkin_time <= dateadd(minute, 10, appointment_start_timestamp)THEN 1 ELSE 0 END AS on_time_count,
         CASE WHEN appointment_start_timestamp::date = CURRENT_DATE AND (COALESCE(checkin_count,0) = 0) THEN 1 ELSE 0 END AS open_count,
         CASE WHEN appointment_start_timestamp::date > CURRENT_DATE THEN 1 ELSE 0 END AS in_future_count,
         appointment_start_timestamp, appointment_end_timestamp,
@@ -133,6 +133,7 @@ view: appointments {
   dimension: create_count {
     type: number
     sql: ${TABLE}.create_count;;
+    description: "Number of times this appointment was created (should always be 1)"
     group_label: "Counts"
   }
   dimension_group: min_update_time {
@@ -147,6 +148,7 @@ view: appointments {
   }
   dimension: update_count {
     type: number
+    description: "Number of times this appointment was updated"
     sql: ${TABLE}.update_count;;
     group_label: "Counts"
   }
@@ -163,6 +165,7 @@ view: appointments {
   dimension: checkin_count {
     type: number
     sql: ${TABLE}.checkin_count;;
+    description: "Number of times there was a check-in for the appointment"
     group_label: "Counts"
   }
 
@@ -212,22 +215,27 @@ view: appointments {
   }
   measure: no_show_count {
     type: sum
+    description: "Count of people who did not show by end of day of appointment"
     sql: ${TABLE}.no_show_count ;;
   }
   measure: late_count {
     type: sum
+    description: "Count of people who showed up more than 10 minutes after scheduled time for appointment"
     sql: ${TABLE}.late_count ;;
   }
   measure: on_time_count {
     type: sum
+    description: "Count of people who showed up early or within 10 minutes of scheduled time for appointment"
     sql: ${TABLE}.on_time_count ;;
   }
   measure: open_count {
     type: sum
+    description: "Count of people who have not yet shown up for appointments today"
     sql: ${TABLE}.open_count ;;
   }
   measure: in_future_count {
     type: sum
+    description: "Count of people appointments in the future"
     sql: ${TABLE}.in_future_count ;;
   }
 }
