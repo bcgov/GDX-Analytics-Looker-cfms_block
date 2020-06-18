@@ -32,7 +32,7 @@ view: appointments {
         GROUP BY 1, 2
       ),
       appointments_raw AS (
-          SELECT name_tracker, ev.dvce_created_tstamp, appointment_id, client_id, agent_id, a.counter_type, role, office_id, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_start_timestamp::timestamp) AS appointment_start_timestamp, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_end_timestamp::timestamp) AS appointment_end_timestamp, program_id, parent_id, program_name, transaction_name
+          SELECT name_tracker, ev.dvce_created_tstamp, appointment_id, client_id, agent_id, a.counter_type, role, office_id, office_type, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_start_timestamp::timestamp) AS appointment_start_timestamp, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_end_timestamp::timestamp) AS appointment_end_timestamp, program_id, parent_id, program_name, transaction_name
 
           FROM atomic.ca_bc_gov_cfmspoc_appointment_create_1 AS acr
           LEFT JOIN atomic.events AS ev ON ev.event_id = acr.root_id AND ev.collector_tstamp = acr.root_tstamp
@@ -41,7 +41,7 @@ view: appointments {
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o ON acr.root_id = o.root_id
           WHERE name_tracker = 'TheQ_prod'
         UNION
-          SELECT name_tracker, CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS update_time, appointment_id, client_id,  agent_id, a.counter_type, role, office_id,CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_start_timestamp::timestamp) AS appointment_start_timestamp, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_end_timestamp::timestamp) AS appointment_end_timestamp, program_id, parent_id, program_name, transaction_name
+          SELECT name_tracker, CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS update_time, appointment_id, client_id,  agent_id, a.counter_type, role, office_id, office_type, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_start_timestamp::timestamp) AS appointment_start_timestamp, CONVERT_TIMEZONE('UTC', 'America/Vancouver', appointment_end_timestamp::timestamp) AS appointment_end_timestamp, program_id, parent_id, program_name, transaction_name
           FROM atomic.ca_bc_gov_cfmspoc_appointment_update_1 AS aup
           LEFT JOIN atomic.events AS ev ON ev.event_id = aup.root_id AND ev.collector_tstamp = aup.root_tstamp
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_4 AS c ON aup.root_id = c.root_id
@@ -77,11 +77,17 @@ view: appointments {
         appointment_start_timestamp, appointment_end_timestamp,
         min_create_time, create_count,
         min_update_time, max_update_time, COALESCE(update_count,0) AS update_count,
-        min_checkin_time, max_checkin_time, COALESCE(checkin_count,0) AS checkin_count
+        min_checkin_time, max_checkin_time, COALESCE(checkin_count,0) AS checkin_count,
+        office_info.site AS office_name,
+        office_info.officesize AS office_size,
+        office_info.area AS area_number,
+        office_type,
+        office_info.current_area AS current_area
       FROM appointments_ranked AS ar
       LEFT JOIN creates on creates.appointment_id = ar.appointment_id AND creates.name_tracker = ar.name_tracker
       LEFT JOIN updates on updates.appointment_id = ar.appointment_id AND updates.name_tracker = ar.name_tracker
       LEFT JOIN checkins on checkins.appointment_id = ar.appointment_id AND checkins.name_tracker = ar.name_tracker
+      LEFT JOIN servicebc.office_info ON servicebc.office_info.rmsofficecode = office_id AND end_date IS NULL -- for now, get the most recent office info
       WHERE appointments_ranked = 1;;
     persist_for: "1 hour"
     distribution_style: all
@@ -169,11 +175,42 @@ view: appointments {
     group_label: "Counts"
   }
 
-
   dimension: office_id {
     type: number
     sql: ${TABLE}.office_id ;;
+    group_label: "Office Info"
   }
+  dimension: office_name {
+    type:  string
+    sql:  ${TABLE}.office_name ;;
+    group_label: "Office Info"
+  }
+  dimension: office_filter{
+    type: string
+    sql: TRANSLATE(TRANSLATE(${TABLE}.office_name, ' ', '_'),'.','') ;; #-- translate location names to use "_" instead of " " for filtering
+    group_label: "Office Info"
+  }
+  dimension: office_size {
+    type:  string
+    sql:  ${TABLE}.office_size ;;
+    group_label: "Office Info"
+  }
+  dimension: area_number {
+    type:  number
+    sql:  ${TABLE}.area_number ;;
+    group_label: "Office Info"
+  }
+  dimension: current_area {
+    type: string
+    sql:  ${TABLE}.current_area ;;
+    group_label: "Office Info"
+  }
+  dimension: office_type {
+    type:  string
+    sql:  ${TABLE}.office_type ;;
+    group_label: "Office Info"
+  }
+
   dimension: agent_id {
     type: number
     sql: ${TABLE}.agent_id ;;
