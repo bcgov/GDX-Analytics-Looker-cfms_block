@@ -28,7 +28,7 @@ explore: cfms_poc_no_filter {
 explore: cfms_old {}
 
 explore: cfms_dev {
-  persist_for: "5 minutes"
+  persist_for: "12 hours"
 }
 
 explore: cats {}
