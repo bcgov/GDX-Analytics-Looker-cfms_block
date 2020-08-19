@@ -1,6 +1,22 @@
 view: cfms_dev {
   derived_table: {
-    sql: WITH pre AS (
+    sql: WITH agent AS (
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id,
+               CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, role
+         FROM atomic.ca_bc_gov_cfmspoc_agent_2 AS a2
+      UNION
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id, counter_type, role
+         FROM atomic.ca_bc_gov_cfmspoc_agent_3 AS a3
+  ),
+  citizen AS (
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, client_id,
+      CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, service_count
+        FROM atomic.ca_bc_gov_cfmspoc_citizen_3 AS c3
+     UNION
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, client_id, counter_type, service_count
+        FROM atomic.ca_bc_gov_cfmspoc_citizen_4 AS c4
+  ),
+  pre AS (
   SELECT
     ev.name_tracker AS namespace,
     ev.event_name,
@@ -21,9 +37,9 @@ view: cfms_dev {
     leave_status -- from customerleft-2.0.0
 
   FROM atomic.events AS ev
-  LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_2 AS a
+  LEFT JOIN agent AS a
       ON ev.event_id = a.root_id AND ev.collector_tstamp = a.root_tstamp
-  LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_3 AS c
+  LEFT JOIN citizen AS c
       ON ev.event_id = c.root_id AND ev.collector_tstamp = c.root_tstamp
   LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o
       ON ev.event_id = o.root_id AND ev.collector_tstamp = o.root_tstamp
@@ -41,6 +57,7 @@ view: cfms_dev {
 
   WHERE ev.name_tracker IN ('TheQ_dev','TheQ_prod','TheQ_test','TheQ_localhost')
     AND client_id IS NOT NULL
+    AND event_name NOT IN ('appointment_checkin','appointment_create','appointment_update')
   ),
   service_info_pre AS (
     SELECT
