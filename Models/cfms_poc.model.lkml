@@ -17,6 +17,12 @@ explore: cfms_poc {
     user_attribute: office_name
   }
   persist_for: "5 minutes"
+
+  join: appointments {
+    type: left_outer
+    sql_on: ${appointments.client_id} = ${cfms_poc.client_id};;
+    relationship: many_to_one
+  }
 }
 explore: cfms_poc_no_filter {
   from: cfms_poc
