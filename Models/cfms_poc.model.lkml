@@ -36,4 +36,9 @@ explore: cats {}
 explore: cfms_all_events {}
 
 explore: all_appointments {}
-explore: appointments {}
+explore: appointments {
+  access_filter: {
+    field: office_filter # use the version of office names that have "_" instead of " "
+    user_attribute: office_name
+  }
+}
