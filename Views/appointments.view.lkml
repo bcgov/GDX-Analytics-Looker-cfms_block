@@ -245,6 +245,10 @@ view: appointments {
     sql: ${TABLE}.transaction_name ;;
   }
 
+  dimension: made_appointment {
+    type: yesno
+    sql: appointment_id IS NOT NULL ;;
+  }
 
 
   measure: count {
