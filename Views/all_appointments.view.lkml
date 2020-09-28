@@ -95,6 +95,11 @@ view: all_appointments {
       sql: ${TABLE}.transaction_name ;;
     }
 
+    dimension: appointment_id {
+      type: string
+      sql:  ${TABLE}.appointment_id ;;
+    }
+
 
     dimension: status {
       type: string
