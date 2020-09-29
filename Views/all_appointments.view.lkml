@@ -110,6 +110,11 @@ view: all_appointments {
       type: count
     }
 
+    measure: appointment_count {
+      type: count_distinct
+      sql: ${TABLE}.appointment_id ;;
+    }
+
     dimension: event_id {
       type: string
       sql:  ${TABLE}.event_id ;;
