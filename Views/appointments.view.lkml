@@ -268,7 +268,7 @@ view: appointments {
   measure: cancel_count {
     type: sum
     description: "Count of people who cancelled their appointment"
-    sql: ${TABLE}.update_count;;
+    sql: ${TABLE}.cancel_count;;
   }
   measure: no_show_count {
     type: sum
