@@ -9,6 +9,17 @@ view: cmslite_themes {
   dimension: node_id {hidden: yes}  # use cats.node_id
   dimension: hr_url {hidden: yes}
 
+  # theme
+  # the CMSL theme
+  dimension: theme {
+    description: "The CMS Lite theme."
+    type: string
+    drill_fields: [subtheme, topic]
+    sql: COALESCE(${TABLE}.theme, '(no theme)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.theme
+  }
+
   # theme_id
   # the CMSL theme ID
   #
