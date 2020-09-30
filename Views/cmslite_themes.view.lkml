@@ -1,60 +1,117 @@
+include: "//cmslite_metadata/Views/themes.view"
+
 view: cmslite_themes {
-  derived_table: {
-    sql: WITH ids AS (
-      SELECT cm.node_id,
-          cm.title,
-          CASE
-            WHEN cm.parent_node_id = 'CA4CBBBB070F043ACF7FB35FE3FD1081' and cm.page_type = 'BC Gov Theme' THEN cm.node_id
-            WHEN cm.ancestor_nodes = '||' THEN cm.parent_node_id
-            ELSE TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 2)) -- take the second entry. The first is always blank as the string has '|' on each end
-          END AS theme_id,
-          CASE
-            WHEN cm.parent_node_id = 'CA4CBBBB070F043ACF7FB35FE3FD1081' THEN NULL -- this page IS a theme, not a sub-theme
-            WHEN cm.ancestor_nodes = '||' AND cm.page_type = 'BC Gov Theme' THEN cm.node_id -- this page is a sub-theme
-            WHEN TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 3)) = '' AND cm_parent.page_type = 'BC Gov Theme' THEN cm.parent_node_id -- the page's parent is a sub-theme
-            WHEN TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 3)) <> '' THEN TRIM(SPLIT_PART(cm.ancestor_nodes, '|', 3)) -- take the third entry. The first is always blank as the string has '|' on each end and the second is the theme
-            ELSE NULL
-          END AS subtheme_id
-          FROM cmslite.metadata AS cm
-          LEFT JOIN cmslite.metadata AS cm_parent ON cm_parent.page_type = 'BC Gov Theme' AND cm_parent.node_id = cm.parent_node_id
-      )
-      SELECT
-      ids.*,
-      cm_theme.title AS theme,
-      cm_sub_theme.title AS subtheme
-      FROM ids
-      LEFT JOIN cmslite.metadata AS cm_theme ON cm_theme.node_id = theme_id
-      LEFT JOIN cmslite.metadata AS cm_sub_theme ON cm_sub_theme.node_id = subtheme_id
-      ;;
-    persist_for: "24 hours"
-    distribution_style: all
+  extends: [themes]
+
+# Hide unneeded dimensions from base view
+  dimension: parent_node_id {hidden: yes}
+  dimension: parent_title {hidden:yes}
+  dimension: node_id {hidden: yes}  # use cats.node_id
+  dimension: hr_url {hidden: yes}
+
+  # theme
+  # the CMSL theme
+  dimension: theme {
+    description: "The CMS Lite theme."
+    type: string
+    drill_fields: [subtheme, topic]
+    sql: COALESCE(${TABLE}.theme, '(no theme)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.theme
   }
 
-  dimension: node_id {
+  # theme_id
+  # the CMSL theme ID
+  #
+  # the COALESCSE expression ensures that a blank value is returned in the
+  # case where the ${TABLE}.theme_id value is missing or null; ensurinig that
+  # user attribute filters will continue to work.
+  #
+  # reference - https://docs.aws.amazon.com/redshift/latest/dg/r_NVL_function.html
+  dimension: theme_id {
+    description: "The alphanumeric CMS Lite theme identifer."
     type: string
-    sql: ${TABLE}.node_id ;;
+    sql: COALESCE(${TABLE}.theme_id,'') ;;
   }
+
+  # subtheme
+  # the CMSL subtheme
+  dimension: subtheme {
+    description: "The CMS Lite subtheme."
+    type: string
+    drill_fields: [topic]
+    sql: COALESCE(${TABLE}.subtheme, '(no subtheme)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.subtheme
+  }
+
+  # subtheme ID
+  # the CMSL subtheme ID
+  dimension: subtheme_id {
+    description: "The alphanumeric CMS Lite subtheme identifier."
+    type: string
+    sql: COALESCE(${TABLE}.subtheme_id,'') ;;
+  }
+
+  # topic
+  # the CMSL topic
+  dimension: topic {
+    description: "The CMS Lite topic."
+    type: string
+    sql: COALESCE(${TABLE}.topic, '(no topic)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.topic
+  }
+
+  # topic ID
+  # the CMSL topic ID
+  dimension: topic_id {
+    description: "The alphanumeric CMS Lite topic identifier."
+    type: string
+    sql: COALESCE(${TABLE}.topic_id,'') ;;
+  }
+
+  # subtopic
+  # the CMSL subtopic
+  dimension: subtopic {
+    description: "The CMS Lite subtopic."
+    type: string
+    sql: COALESCE(${TABLE}.subtopic, '(no subtopic)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.subtopic
+  }
+
+  # subtopic ID
+  # the CMSL subtopic ID
+  dimension: subtopic_id {
+    description: "The alphanumeric CMS Lite subtopic identifier."
+    type: string
+    sql: COALESCE(${TABLE}.subtopic_id,'') ;;
+  }
+
+  # subsubtopic
+  # the CMSL subsubtopic
+  dimension: subsubtopic {
+    description: "The CMS Lite subsubtopic."
+    type: string
+    sql: COALESCE(${TABLE}.subsubtopic, '(no subsubtopic)') ;;
+    suggest_explore: theme_cache
+    suggest_dimension: theme_cache.subsubtopic
+  }
+
+  # subsubtopic ID
+  # the CMSL subsubtopic ID
+  dimension: subsubtopic_id {
+    description: "The alphanumeric CMS Lite subsubtopic identifier."
+    type: string
+    sql: COALESCE(${TABLE}.subsubtopic_id,'') ;;
+  }
+
+  # title
   dimension: title {
+    description: "The CMS Lite page title."
     type: string
     sql: ${TABLE}.title ;;
-  }
-
-  dimension: theme {
-    type: string
-    sql: ${TABLE}.theme ;;
-  }
-  dimension: theme_id {
-    type: string
-    sql: COALESCE(${TABLE}.theme_id,'') ;; #ensure that this field is not NULL, so that user attribute filters work
-  }
-
-  dimension: subtheme {
-    type: string
-    sql: ${TABLE}.subtheme ;;
-  }
-  dimension: subtheme_id {
-    type: string
-    sql: ${TABLE}.subtheme_id ;;
   }
 
 }

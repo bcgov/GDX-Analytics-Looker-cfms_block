@@ -37,7 +37,13 @@ explore: cfms_old {}
 #  persist_for: "12 hours"
 #}
 
-explore: cats {}
+explore: cats {
+  join: cmslite_themes {
+    type: left_outer
+    sql_on: ${cats.node_id} = ${cmslite_themes.node_id} ;;
+    relationship: one_to_one
+  }
+}
 
 explore: cfms_all_events {}
 
