@@ -8,6 +8,9 @@ fiscal_month_offset: 3
 # include all views in this project
 include: "/Views/*.view"
 
+# include themes_cache
+include: "//cmslite_metadata/Explores/themes_cache.explore.lkml"
+
 # For now, don't include the dashboard we built. There is an editable version in the Shared -> Service BC Folder
 # include: "*.dashboard"
 
