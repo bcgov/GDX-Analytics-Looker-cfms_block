@@ -36,9 +36,9 @@ explore: cfms_poc_no_filter {
 # A copy of the original CFMS / TheQ model for comparisons
 explore: cfms_old {}
 
-#explore: cfms_dev {
-#  persist_for: "12 hours"
-#}
+explore: cfms_dev {
+  persist_for: "2 hours"
+}
 
 explore: cats {
   join: cmslite_themes {

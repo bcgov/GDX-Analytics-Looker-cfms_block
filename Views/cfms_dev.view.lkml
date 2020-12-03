@@ -58,6 +58,7 @@ view: cfms_dev {
   WHERE ev.name_tracker IN ('TheQ_dev','TheQ_prod','TheQ_test','TheQ_localhost')
     AND client_id IS NOT NULL
     AND event_name NOT IN ('appointment_checkin','appointment_create','appointment_update')
+    AND  ev.dvce_created_tstamp > DATEADD(day,-30, DATE_TRUNC('day',GETDATE()) )
   ),
   service_info_pre AS (
     SELECT
