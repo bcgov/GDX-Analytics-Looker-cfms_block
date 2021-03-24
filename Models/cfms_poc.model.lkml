@@ -16,7 +16,7 @@ include: "//cmslite_metadata/Explores/themes_cache.explore.lkml"
 
 datagroup: theq_sbc_datagroup {
   description: "Datagroup for TheQ SBC caching"
-  max_cache_age: "24 hours"
+  max_cache_age: "1 hour"
   sql_trigger: SELECT MAX(latest_time) FROM derived.theq_step1 ;;
 }
 explore: cfms_poc {
