@@ -14,12 +14,17 @@ include: "//cmslite_metadata/Explores/themes_cache.explore.lkml"
 # For now, don't include the dashboard we built. There is an editable version in the Shared -> Service BC Folder
 # include: "*.dashboard"
 
+datagroup: theq_sbc_datagroup {
+  description: "Datagroup for TheQ SBC caching"
+  max_cache_age: "24 hours"
+  sql_trigger: SELECT MAX(latest_time) FROM derived.theq_step1 ;;
+}
 explore: cfms_poc {
   access_filter: {
     field: office_filter # use the version of office names that have "_" instead of " "
     user_attribute: office_name
   }
-  persist_for: "5 minutes"
+  persist_with: theq_sbc_datagroup
 
   join: appointments {
     type: left_outer
@@ -29,8 +34,7 @@ explore: cfms_poc {
 }
 explore: cfms_poc_no_filter {
   from: cfms_poc
-  persist_for: "5 minutes"
-
+  persist_with: theq_sbc_datagroup
 }
 
 # A copy of the original CFMS / TheQ model for comparisons
