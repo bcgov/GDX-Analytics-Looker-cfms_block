@@ -1,5 +1,21 @@
+# include date comparisons
+include: "//snowplow_web_block/Includes/date_comparisons_common.view.lkml"
+
+
 view: cfms_poc {
   sql_table_name: derived.theq_step1 ;;
+
+
+  extends: [date_comparisons_common]
+  dimension_group: filter_start {
+    sql: ${TABLE}.welcome_time ;;
+  }
+  dimension: summary_granularity { hidden: yes }
+  dimension: summary_date { hidden: yes }
+  dimension: in_summary_period { hidden: yes }
+
+
+
 
   dimension: service_creation_flag {
     type: yesno
@@ -214,6 +230,7 @@ view: cfms_poc {
     value_format: "[h]:mm:ss"
     group_label: "Prep Duration"
   }
+
   measure: hold_duration_total {
     description: "Total hold duration."
     type: sum
@@ -265,12 +282,6 @@ view: cfms_poc {
     group_label: "Serve Duration"
   }
 
-  #measure: serve_duration_total_raw {
-  #  type: sum_distinct
-  #  sql_distinct_key: ${client_id} ;;
-  #  sql: ${TABLE}.serve_duration_total;;
-  #  group_label: "Durations"
-  #}
   measure: serve_duration_per_visit_average {
     description: "Average serve duration per visit."
     type: average_distinct
