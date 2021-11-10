@@ -1,12 +1,12 @@
 # include date comparisons
-include: "//snowplow_web_block/Includes/date_comparisons_common.view.lkml"
+include: "/Includes/date_comparisons_common_sbc.view.lkml"
 
 
 view: cfms_poc {
   sql_table_name: derived.theq_step1 ;;
 
 
-  extends: [date_comparisons_common]
+  extends: [date_comparisons_common_sbc]
   dimension_group: filter_start {
     sql: ${TABLE}.welcome_time ;;
   }
@@ -973,6 +973,18 @@ view: cfms_poc {
     sql: COALESCE(${TABLE}.status, 'Open Ticket');;
   }
 
+
+  # Dimensions and measures used to match against Online Appts info
+  dimension: appointment_show {
+    description: "Whether the client showed up for an appointment. If status is not NULL."
+    type:  yesno
+    sql: ${TABLE}.status IS NOT NULL ;;
+  }
+
+  measure: appointment_show_count {
+    type: sum
+    sql: CASE WHEN ${TABLE}.status IS NULL THEN 0 ELSE 1 END ;;
+  }
 
   # on_final_date will be yes for welcome_times in the last day of the current_period.
   # since date ranges are selected "until (before)", this means any welcome time over the day that is one
