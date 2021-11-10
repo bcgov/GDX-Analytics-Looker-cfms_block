@@ -6,6 +6,6 @@ project_name: "cfms_block"
 local_dependency: {
   project: "cmslite_metadata"
 }
-local_dependency: {
-  project: "snowplow_web_block"
-}
+#local_dependency: {
+#  project: "snowplow_web_block"
+#}
