@@ -789,6 +789,11 @@ view: cfms_poc {
     type: number
     sql: ${TABLE}.agent_id ;;
   }
+  dimension: idir {
+    type: string
+    label: "IDIR"
+    sql: ${TABLE}.idir ;;
+  }
   dimension: program_id {
     description: "The internal ID number for this program."
     type: string
