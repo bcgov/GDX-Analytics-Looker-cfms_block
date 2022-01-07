@@ -1,3 +1,4 @@
+# The CATS feed is broken and development on this is on hold for the time being.
 view: cats {
   derived_table: {
     sql: SELECT govdate::timestamp,
