@@ -2,11 +2,16 @@ view: cfms_dev {
   derived_table: {
     sql: WITH agent AS (
         SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id,
-               CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, role
+               CASE WHEN (quick_txn) THEN 'Quick Transaction' END AS counter_type, role, NULL AS idir
          FROM atomic.ca_bc_gov_cfmspoc_agent_2 AS a2
       UNION
-        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id, counter_type, role
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id,
+              counter_type, role, NULL AS idir
          FROM atomic.ca_bc_gov_cfmspoc_agent_3 AS a3
+      UNION
+        SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, agent_id,
+              counter_type, role, idir
+         FROM atomic.ca_bc_gov_cfmspoc_agent_4 AS a4
   ),
   citizen AS (
         SELECT schema_vendor, schema_name, schema_format, schema_version, root_id, root_tstamp, ref_root, ref_tree, ref_parent, client_id,
@@ -27,6 +32,7 @@ view: cfms_dev {
     office_id,
     office_type,
     agent_id,
+    idir,
     channel,
     program_id,
     parent_id,
@@ -91,6 +97,7 @@ view: cfms_dev {
     office_type,
     service_count,
     agent_id,
+    idir,
     ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS agent_info_ranked
     FROM pre
     WHERE event_name <> 'customerleft'
@@ -239,6 +246,7 @@ view: cfms_dev {
         ELSE status
       END AS status,
       agent_info.agent_id,
+      idir,
       office_id,
       office_type,
       channel,
@@ -353,6 +361,7 @@ view: cfms_dev {
       status,
       finish_type,
       agent_info.agent_id,
+      idir,
       item_list.service_creation_duration,
       item_list.serve_duration,
       item_list.waiting_duration,
@@ -1165,6 +1174,11 @@ view: cfms_dev {
   dimension: agent_id {
     type: number
     sql: ${TABLE}.agent_id ;;
+  }
+  dimension: idir {
+    type: string
+    label: "IDIR"
+    sql: ${TABLE}.idir ;;
   }
   dimension: program_id {
     description: "The internal ID number for this program."
