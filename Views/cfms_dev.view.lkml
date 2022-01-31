@@ -77,7 +77,7 @@ view: cfms_dev {
     parent_id,
     program_name,
     transaction_name,
-    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS service_info_ranked
+    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace ORDER BY event_time DESC) AS service_info_ranked
     FROM pre
     WHERE event_name = 'chooseservice'
     ORDER BY event_time DESC
@@ -98,7 +98,7 @@ view: cfms_dev {
     service_count,
     agent_id,
     idir,
-    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS agent_info_ranked
+    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace ORDER BY event_time DESC) AS agent_info_ranked
     FROM pre
     WHERE event_name <> 'customerleft'
     ORDER BY event_time DESC
@@ -111,6 +111,7 @@ view: cfms_dev {
   ),
   finish_info_pre AS (
     SELECT
+    event_time,
     namespace,
     client_id,
     service_count,
@@ -120,10 +121,10 @@ view: cfms_dev {
       WHEN (inaccurate_time) THEN 'Inaccurate Time'
       WHEN (event_name IN ('finish','finishstopped')) THEN 'Finished'
       ELSE 'Customer Left (' || leave_status || ')' END AS finish_type,
-    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace) AS finish_info_ranked
+    ROW_NUMBER() OVER (PARTITION BY client_id, service_count, namespace ORDER BY event_time DESC) AS finish_info_ranked
     FROM pre
     WHERE event_name IN ('finish','finishstopped','customerleft')
-    GROUP BY namespace, client_id, service_count,finish_type,transaction_count,inaccurate_time
+    GROUP BY namespace, client_id, service_count,finish_type,transaction_count,inaccurate_time,event_time
   ),
   finish_info AS ( -- we get our service choices by taking the final choices made by chooseservice for a given client_id and service_count
     SELECT
