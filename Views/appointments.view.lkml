@@ -2,10 +2,10 @@ view: appointments {
   derived_table: {
     sql:
       WITH agent AS (
-        SELECT root_id, root_tstamp, agent_id, counter_type, role
+        SELECT root_id, root_tstamp, agent_id, counter_type, CASE WHEN role = 'WebSelfSe' THEN 'WebSelfServe' ELSE role END AS role
          FROM atomic.ca_bc_gov_cfmspoc_agent_3 AS a3
       UNION
-        SELECT root_id, root_tstamp, agent_id, counter_type, role
+        SELECT root_id, root_tstamp, agent_id, counter_type, CASE WHEN role = 'WebSelfSe' THEN 'WebSelfServe' ELSE role END AS role
          FROM atomic.ca_bc_gov_cfmspoc_agent_4 AS a4
       ),
       appointment_create_raw AS (
