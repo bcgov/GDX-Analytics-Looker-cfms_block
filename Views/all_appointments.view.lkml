@@ -13,13 +13,15 @@ view: all_appointments {
             appointments.event_name, appointment_id, appointment_start_timestamp, appointment_end_timestamp, status, program_id, parent_id, program_name, transaction_name,
             appointments.root_id AS event_id,
             a.agent_id,
-            a.role,
-            a.counter_type,
+            COALESCE(a.role,a2.role),
+            COALESCE(a.counter_type,a2.counter_type),
             c.client_id,
             o.office_id,
             ev.name_tracker AS namespace
           FROM appointments
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_3 AS a
+            ON appointments.root_id = a.root_id
+          LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_4 AS a2
             ON appointments.root_id = a.root_id
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_4 AS c
             ON appointments.root_id = c.root_id
