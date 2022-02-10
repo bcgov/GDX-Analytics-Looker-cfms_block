@@ -1,11 +1,18 @@
 view: appointments {
   derived_table: {
     sql:
-      WITH appointment_create_raw AS (
+      WITH agent AS (
+        SELECT root_id, root_tstamp, agent_id, counter_type, role
+         FROM atomic.ca_bc_gov_cfmspoc_agent_3 AS a3
+      UNION
+        SELECT root_id, root_tstamp, agent_id, counter_type, role
+         FROM atomic.ca_bc_gov_cfmspoc_agent_4 AS a4
+      ),
+      appointment_create_raw AS (
         SELECT name_tracker, role, CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS create_time, appointment_id
         FROM atomic.ca_bc_gov_cfmspoc_appointment_create_1 AS acr
         LEFT JOIN atomic.events AS ev ON ev.event_id = acr.root_id AND ev.collector_tstamp = acr.root_tstamp
-        LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_3 AS a ON acr.root_id = a.root_id
+        LEFT JOIN agent AS a ON acr.root_id = a.root_id
       ),
       appointment_update_raw AS (
         SELECT name_tracker, CONVERT_TIMEZONE('UTC', 'America/Vancouver', ev.dvce_created_tstamp) AS update_time, appointment_id, status
@@ -44,7 +51,7 @@ view: appointments {
           FROM atomic.ca_bc_gov_cfmspoc_appointment_create_1 AS acr
           LEFT JOIN atomic.events AS ev ON ev.event_id = acr.root_id AND ev.collector_tstamp = acr.root_tstamp
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_4 AS c ON acr.root_id = c.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_3 AS a ON acr.root_id = a.root_id
+          LEFT JOIN agent AS a ON acr.root_id = a.root_id
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o ON acr.root_id = o.root_id
           WHERE name_tracker = 'TheQ_prod'
         UNION
@@ -52,7 +59,7 @@ view: appointments {
           FROM atomic.ca_bc_gov_cfmspoc_appointment_update_1 AS aup
           LEFT JOIN atomic.events AS ev ON ev.event_id = aup.root_id AND ev.collector_tstamp = aup.root_tstamp
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_citizen_4 AS c ON aup.root_id = c.root_id
-          LEFT JOIN atomic.ca_bc_gov_cfmspoc_agent_3 AS a ON aup.root_id = a.root_id
+          LEFT JOIN agent AS a ON aup.root_id = a.root_id
           LEFT JOIN atomic.ca_bc_gov_cfmspoc_office_1 AS o ON aup.root_id = o.root_id
           WHERE name_tracker = 'TheQ_prod'
       ),
