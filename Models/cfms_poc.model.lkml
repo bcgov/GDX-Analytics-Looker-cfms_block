@@ -37,6 +37,17 @@ explore: cfms_poc_no_filter {
   persist_with: theq_sbc_datagroup
 }
 
+explore: theq_merged_view {
+  access_filter: {
+    field: office_filter # use the version of office names that have "_" instead of " "
+    user_attribute: office_name
+  }
+  #persist_with: theq_sbc_datagroup
+}
+
+
+
+
 # A copy of the original CFMS / TheQ model for comparisons
 explore: cfms_old {}
 
