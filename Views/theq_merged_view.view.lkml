@@ -158,4 +158,48 @@ FROM
     group_label: "Service Creation Duration"
   }
 
+  measure: prep_duration_average {
+    description: "Average preparation duration."
+    type:  average
+    sql: (1.00 * ${TABLE}.prep_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Prep Duration"
+  }
+  measure: prep_duration_average_outlier {
+    description: "Average preparation duration (outler)."
+    type:  average
+    sql: (1.00 * ${TABLE}.prep_duration_outlier)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Prep Duration"
+  }
+  measure: prep_duration_average_not_outlier {
+    description: "Average preparation duration (not outlier)."
+    type:  average
+    sql: (1.00 * ${TABLE}.prep_duration_not_outlier)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Prep Duration"
+  }
+
+  measure: serve_duration_average {
+    description: "Average serve duration."
+    type:  average
+    sql: (1.00 * ${TABLE}.serve_duration)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Serve Duration"
+  }
+  measure: serve_duration_average_outlier {
+    description: "Average serve duration (outlier)."
+    type:  average
+    sql: (1.00 * ${TABLE}.serve_duration_outlier)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Serve Duration"
+  }
+  measure: serve_duration_average_not_outlier {
+    description: "Average serve duration (not outlier)."
+    type:  average
+    sql: (1.00 * ${TABLE}.serve_duration_not_outlier)/(60*60*24) ;;
+    value_format: "[h]:mm:ss"
+    group_label: "Serve Duration"
+  }
+
    }
