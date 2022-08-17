@@ -79,12 +79,15 @@ FROM
     LEFT JOIN inaccurate_list ON
       full_list."client_id" = inaccurate_list."client_id"
       AND full_list."namespace" = inaccurate_list."namespace"
+      WHERE {% incrementcondition %} full_list."welcome_time" {% endincrementcondition %} -- this matches the table column used by increment_key
+        ;;
+    distribution_style: all
+    datagroup_trigger: datagroup_09_29_49
+    increment_key: "event_hour" # this, linked with increment_offset, says to consider "timestamp" and
+    # to reprocess up to 24 hours of results
+    increment_offset: 24
 
-  ;;
-                # https://docs.looker.com/data-modeling/learning-lookml/caching
-          #distribution_style: all
-          #sql_trigger_value: SELECT COUNT(*) FROM derived.theq_step1
-    }
+  }
 
 
   dimension: outlier {}
@@ -201,5 +204,4 @@ FROM
     value_format: "[h]:mm:ss"
     group_label: "Serve Duration"
   }
-
-   }
+}
