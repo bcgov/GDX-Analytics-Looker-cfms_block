@@ -72,3 +72,15 @@ explore: appointments {
     user_attribute: office_name
   }
 }
+
+datagroup: datagroup_09_29_49 {
+  label: "09 and 39 Minute Datagroup"
+  description: "Update every 20 minutes to drive incrementals PDT at 09, 29, and 49 past the hour except during overnight maintenance window"
+  sql_trigger: SELECT CASE WHEN DATE_PART('hour',timezone('America/Vancouver', now())) BETWEEN 3 AND 5
+                  THEN DATE(timezone('America/Vancouver', now())) + interval '150 minutes'
+            WHEN DATE_PART('minute',timezone('America/Vancouver', now())) < 09 OR DATE_PART('minute',timezone('America/Vancouver', now())) >= 49
+              THEN DATE_TRUNC('hour',timezone('America/Vancouver', now()))
+            WHEN DATE_PART('minute',timezone('America/Vancouver', now())) >= 09 OR DATE_PART('minute',timezone('America/Vancouver', now())) < 29
+              THEN DATE_TRUNC('hour',timezone('America/Vancouver', now())) +  interval '20 minutes'
+            ELSE DATE_TRUNC('hour',timezone('America/Vancouver', now())) +  interval '40 minutes' END ;;
+}
