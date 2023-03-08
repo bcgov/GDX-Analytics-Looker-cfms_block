@@ -81,7 +81,8 @@ FROM
       AND full_list."namespace" = inaccurate_list."namespace"
       WHERE {% incrementcondition %} full_list."welcome_time" {% endincrementcondition %} -- this matches the table column used by increment_key
         ;;
-    distribution_style: all
+    distribution: "welcome_time"
+    sortkeys: ["welcome_time"]
     datagroup_trigger: datagroup_09_29_49
     increment_key: "event_hour" # this, linked with increment_offset, says to consider "timestamp" and
     # to reprocess up to 24 hours of results
